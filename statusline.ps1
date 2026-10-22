@@ -1,4 +1,7 @@
-﻿$inputJson = [Console]::In.ReadToEnd() | ConvertFrom-Json
+﻿# Claude Code 按 UTF-8 传进来；PowerShell 默认按系统编码（中文系统是 GBK）读，
+# 文件夹名有中文时会吃掉后面的引号，整段解析失败，状态栏只剩一根竖线
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$inputJson = (New-Object IO.StreamReader([Console]::OpenStandardInput(), [Text.Encoding]::UTF8)).ReadToEnd() | ConvertFrom-Json
 $model = $inputJson.model.display_name
 $dir = Split-Path -Leaf $inputJson.workspace.current_dir
 $used = $inputJson.context_window.used_percentage
