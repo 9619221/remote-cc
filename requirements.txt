@@ -1,0 +1,11 @@
+# 必需
+pywebview>=6.0      # 电脑上的小窗口
+pystray>=0.19       # 托盘图标
+Pillow>=10.0        # 托盘图标、电脑截图
+pywebpush>=2.0      # 手机推送通知
+qrcode>=7.4         # 手机扫码连接
+
+# 可选：按住说话转文字（有 NVIDIA 显卡会快很多，没有也能用 CPU 跑）
+# faster-whisper>=1.0
+# nvidia-cublas-cu12
+# nvidia-cudnn-cu12

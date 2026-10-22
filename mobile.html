@@ -1,0 +1,1946 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Remote CC">
+<meta name="theme-color" content="#eef0f5">
+<title>Remote CC</title>
+<link rel="apple-touch-icon" sizes="180x180" href="__TOUCH_ICON__">
+<link rel="icon" href="/icon.png">
+<style>
+  :root { --ink: #1d1d1f; --ink2: #3a3a3c; --muted: #6e6e73; --faint: #a1a1a6; --blue: #0a84ff; --green: #30d158; --orange: #ff9f0a; --red: #ff3b30; --track: rgba(0,0,0,.07); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body { color: var(--ink); font: 16px/1.6 -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; -webkit-text-size-adjust: 100%;
+         background: radial-gradient(circle at 10% 0%, #ffd9c7, transparent 45%), radial-gradient(circle at 100% 20%, #c9dcff, transparent 45%), radial-gradient(circle at 50% 100%, #d8f3e3, transparent 50%), #eef0f5; background-attachment: fixed; }
+  .glass { background: rgba(255,255,255,.66); backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6); border: 1px solid rgba(255,255,255,.75); }
+  button { font: inherit; border: 0; cursor: pointer; color: inherit; background: none; }
+
+  /* ---------- 首页 ---------- */
+  #home { padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 30px); }
+  #home h1 { font-size: 32px; font-weight: 700; letter-spacing: -.02em; margin: 8px 4px 14px; display: flex; align-items: center; gap: 10px; }
+  #home h1 img { width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .sec { font-size: 13px; font-weight: 600; color: var(--muted); margin: 18px 6px 8px; letter-spacing: .02em; }
+  .accs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .acc { border-radius: 20px; padding: 12px; }
+  .acc .nm { display: flex; align-items: center; gap: 5px; font-weight: 700; font-size: 15px; }
+  .acc .pl { font-size: 10.5px; font-weight: 600; color: var(--muted); }
+  .acc .gs { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .rings { position: relative; width: 56px; height: 56px; flex: none; }
+  .rings svg { position: absolute; transform: rotate(-90deg); }
+  .rings .fg { stroke-linecap: round; transition: stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1); }
+  .acc .lg { font-size: 12px; color: var(--muted); line-height: 1.35; min-width: 0; }
+  .acc .lg b { font-size: 16px; display: block; }
+  .acc .err { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .term { display: block; width: 100%; text-align: left; border-radius: 20px; padding: 14px 16px; margin-bottom: 10px; transition: transform .15s; }
+  .term:active { transform: scale(.98); }
+  .term .top { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); flex: none; }
+  .dot.busy { background: var(--orange); animation: blink 1.2s infinite; }
+  .dot.waiting { background: var(--red); animation: blink .8s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  .tag { font-size: 12px; font-weight: 600; color: #fff; background: var(--blue); border-radius: 10px; padding: 1px 8px; }
+  .st { font-size: 13px; color: var(--muted); margin-left: auto; }
+  .st.waiting { color: var(--red); font-weight: 600; }
+  .term .t { font-weight: 600; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .term .cwd { font-size: 12.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 15px; }
+
+  /* ---------- 对话页 ---------- */
+  #chat { display: none; height: 100%; flex-direction: column; }
+  #chat.show { display: flex; }
+  /* iOS 会给屏幕最上面一截加模糊（比状态栏还高一点），标题要落在它下面才清楚 */
+  .bar { display: flex; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top) + 24px) 10px 8px; border-width: 0 0 1px; }
+  .back { color: var(--blue); font-size: 17px; padding: 4px 6px; }
+  .bar .ttl { flex: 1; min-width: 0; text-align: center; padding-right: 50px; }
+  .bar .ttl b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar .ttl span { font-size: 12px; color: var(--muted); }
+  /* 输入栏最上面：模型 / 思考程度 / 权限 三段式，点了能切 */
+  .tst { display: flex; gap: 3px; padding: 3px; margin: 0 0 8px; border-radius: 14px; background: rgba(0,0,0,.045); transition: opacity .2s; }
+  .tst:empty { display: none; }
+  .tst.off { opacity: .45; }
+  .tst button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; padding: 6px 6px 7px; border-radius: 11px;
+    background: rgba(255,255,255,.8); box-shadow: 0 1px 2px rgba(0,0,0,.06); transition: transform .12s; }
+  .tst button.mode { flex: 1.7; }
+  .tst button:active { transform: scale(.96); }
+  .tst small { font-size: 11.5px; color: var(--faint); line-height: 1.3; }
+  .tst b { display: flex; align-items: center; gap: 5px; max-width: 100%; font-size: 14.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; }
+  /* 权限前面的小圆点：越放得开颜色越暖 */
+  .tst b i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .tst b i.bypassPermissions { background: var(--orange); box-shadow: 0 0 6px rgba(255,159,10,.7); }
+  .tst b i.auto { background: var(--blue); }
+  .tst b i.acceptEdits { background: #bf5af2; }
+  .tst b i.plan { background: var(--green); }
+  #msgs { flex: 1; overflow-y: auto; padding: 14px 12px 10px; -webkit-overflow-scrolling: touch; }
+  .u { max-width: 85%; margin: 4px 0 14px auto; padding: 9px 14px; border-radius: 20px 20px 6px 20px; background: var(--blue); color: #fff; white-space: pre-wrap; word-break: break-word; width: fit-content; }
+  .a { margin: 0 0 14px; padding: 12px 15px; border-radius: 20px 20px 20px 6px; background: rgba(255,255,255,.88); word-break: break-word; font-size: 15.5px; line-height: 1.65; }
+  .a > :first-child { margin-top: 0; } .a > :last-child { margin-bottom: 0; }
+  .a p { margin: 0 0 .6em; }
+  .a h1, .a h2, .a h3, .a h4 { font-size: 16.5px; margin: .9em 0 .4em; line-height: 1.35; }
+  .a h1 { font-size: 18px; }
+  .a ul, .a ol { margin: .2em 0 .6em; padding-left: 1.3em; }
+  .a li { margin: .15em 0; }
+  .a code { font: 13.5px ui-monospace, "SF Mono", Menlo, monospace; background: rgba(0,0,0,.06); border-radius: 5px; padding: 1px 5px; }
+  .prewrap { position: relative; }
+  /* z-index：iPhone 会把能横滑的代码块画在上面一层，不加的话按钮被盖住看不见 */
+  .prewrap .cp { position: absolute; z-index: 2; top: 6px; right: 6px; font-size: 12px; color: #fff; background: rgba(255,255,255,.18); border-radius: 8px; padding: 3px 9px; }
+  .a code { cursor: pointer; }
+  /* 长按回复：不弹 iPhone 自带的选字菜单，换成我们自己的「复制」 */
+  .a[data-c] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; transition: transform .15s; }
+  .a.sel { -webkit-touch-callout: default; -webkit-user-select: text; user-select: text; box-shadow: 0 0 0 2px rgba(10,132,255,.35); }
+  .a.lp { transform: scale(.98); box-shadow: 0 0 0 2px rgba(10,132,255,.35); }
+  #cpPop { position: fixed; z-index: 30; display: none; background: rgba(30,30,32,.92); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); overflow: hidden; }
+  #cpPop.show { display: flex; }
+  #cpPop button { color: #fff; font-size: 15px; font-weight: 600; padding: 9px 14px; }
+  #cpPop button + button { border-left: 1px solid rgba(255,255,255,.2); }
+  .a pre { background: #1d1d1f; color: #f2f2f7; border-radius: 12px; padding: 10px 12px; overflow-x: auto; margin: .5em 0 .7em; }
+  .a pre code { background: none; color: inherit; padding: 0; font-size: 12.5px; line-height: 1.5; }
+  .a blockquote { margin: .4em 0; padding: 2px 0 2px 10px; border-left: 3px solid rgba(0,0,0,.15); color: var(--muted); }
+  .a hr { border: 0; border-top: 1px solid rgba(0,0,0,.1); margin: .8em 0; }
+  .a a { color: var(--blue); }
+  .tw { overflow-x: auto; margin: .4em -4px .7em; }
+  .a table { border-collapse: collapse; font-size: 13.5px; min-width: 100%; }
+  .a th, .a td { border-bottom: 1px solid rgba(0,0,0,.08); padding: 6px 8px; text-align: left; vertical-align: top; }
+  .a th { font-weight: 600; background: rgba(0,0,0,.03); white-space: nowrap; }
+  .a td.nw { white-space: nowrap; }
+  .a td.lg { min-width: 11em; }
+  details.tools { margin: -6px 0 12px 6px; font-size: 13px; color: var(--muted); }
+  details.tools summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,.05); }
+  details.tools summary::-webkit-details-marker { display: none; }
+  details.tools summary::before { content: "⚙︎"; }
+  details.tools[open] summary { margin-bottom: 4px; }
+  details.tools div { font: 12px/1.5 ui-monospace, Menlo, monospace; padding: 2px 4px 2px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .typing { display: none; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; padding: 0 16px 8px; }
+  .typing.show { display: flex; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); animation: bounce 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 50% { transform: translateY(-4px); opacity: .5; } }
+  .jump { position: fixed; right: 16px; bottom: 130px; width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.95); box-shadow: 0 4px 14px rgba(0,0,0,.15); color: var(--blue); font-size: 18px; display: none; }
+  .jump.show { display: block; }
+
+  .dock { padding: 8px 10px calc(env(safe-area-inset-bottom) + 8px); border-width: 1px 0 0; }
+  body.kbd .dock { padding-bottom: 6px; }  /* 键盘弹出时，底部横条那段留白被键盘盖住了，不用再留 */
+  /* 常用回复：一排胶囊，点了直接发 */
+  .chips2 { display: flex; gap: 6px; overflow-x: auto; padding: 0 2px 8px; scrollbar-width: none; }
+  .chips2:empty { display: none; }
+  .chips2::-webkit-scrollbar { display: none; }
+  .chips2 button { flex: none; background: rgba(10,132,255,.1); color: var(--blue); font-weight: 600; border-radius: 999px; padding: 6px 14px; font-size: 14.5px; }
+  .chips2 button.stop { background: rgba(255,59,48,.12); color: var(--red); }
+  .chips2 button.ok { background: var(--blue); color: #fff; }
+  /* Claude 问选择题：选项直接做成按钮 */
+  .qa { display: none; padding: 2px 2px 8px; }
+  .qa.show { display: block; }
+  .qa .qt { font-size: 14px; font-weight: 600; margin: 0 4px 8px; }
+  .qa .qt small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; }
+  .qa .opts { display: grid; gap: 6px; }
+  .qa .opts button { text-align: left; background: #fff; border-radius: 14px; padding: 10px 14px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .qa .opts button:active { background: rgba(10,132,255,.1); }
+  .qa .opts button b { color: var(--blue); margin-right: 8px; }
+  /* 输入栏：iMessage 式，左边圆形 ＋，胶囊输入框，发送 / 麦克风收在输入框里面右侧 */
+  .row { display: flex; gap: 8px; align-items: flex-end; }
+  .kb { width: 42px; height: 42px; margin-bottom: 2px; border-radius: 50%; background: rgba(120,120,128,.16); color: var(--ink2); flex: none; display: grid; place-items: center; }
+  .kb svg { width: 23px; height: 23px; }
+  .kb:active { background: rgba(120,120,128,.28); }
+  .kb.on { background: rgba(10,132,255,.15); color: var(--blue); }
+  .field { flex: 1; min-width: 0; position: relative; display: flex; }
+  textarea { flex: 1; min-width: 0; font: inherit; font-size: 17px; resize: none; outline: none; border: 1px solid rgba(60,60,67,.18); border-radius: 23px;
+    padding: 9px 48px 9px 16px; background: rgba(255,255,255,.96); max-height: 130px; line-height: 1.5; transition: border-color .2s, box-shadow .2s; }
+  textarea:focus { border-color: rgba(10,132,255,.45); box-shadow: 0 0 0 3px rgba(10,132,255,.1); }
+  textarea::placeholder { color: rgba(60,60,67,.38); }
+  .send { position: absolute; right: 5px; bottom: 5px; width: 36px; height: 36px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; transition: transform .12s, background .2s; }
+  .send svg { width: 20px; height: 20px; }
+  .send:active { transform: scale(.88); }
+  .send:disabled { opacity: .35; }
+  .notice { border-radius: 18px; padding: 12px 14px; font-size: 14px; color: var(--ink2); display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .notice[hidden] { display: none; }  /* 上面写了 display:flex 会盖掉 hidden，留下一个空白框 */
+  .notice span { flex: 1; }
+  .notice button { flex: none; background: var(--blue); color: #fff; font-weight: 600; font-size: 14px; border-radius: 999px; padding: 6px 14px; }
+  /* 左滑露出「换到 X」 */
+  .swipe { position: relative; margin-bottom: 10px; border-radius: 20px; overflow: hidden; }
+  .swipe .term { margin: 0; position: relative; z-index: 1; transition: transform .25s cubic-bezier(.2,.9,.3,1); touch-action: pan-y;
+                 background: #f9f9fb; backdrop-filter: none; -webkit-backdrop-filter: none; }  /* 不透明，免得底下的按钮透出来 */
+  .swipe.drag .term { transition: none; }
+  .acts { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
+  .acts button { width: 86px; color: #fff; font-size: 14px; font-weight: 600; line-height: 1.3; padding: 0 6px; }
+  .acts button:nth-child(odd) { background: var(--blue); }
+  .acts button:nth-child(even) { background: #5e5ce6; }
+  .acts button small { display: block; font-size: 11.5px; font-weight: 500; opacity: .85; }
+  .acts button.close { background: var(--red); }
+  .acts button.armed { background: var(--orange); }
+  .swipeHint { font-size: 12.5px; color: var(--faint); margin: -2px 6px 8px; }
+  /* 首页精简版：终端一行一个、额度一号一条 */
+  .mini { border-radius: 20px; overflow: hidden; }
+  .mh { display: block; width: 100%; padding: 12px 16px; text-align: left; border-top: 1px solid rgba(0,0,0,.05); }
+  .mh:first-child { border-top: 0; }
+  .mh:active { background: rgba(0,0,0,.04); }
+  .mh .l1 { display: flex; align-items: baseline; gap: 10px; }
+  .mh b { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mh .tm { flex: none; font-size: 12.5px; color: var(--muted); }
+  .mh small { display: block; font-size: 12px; color: var(--faint); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #home { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
+  .tabbar { position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 5; display: flex; border-radius: 24px; padding: 6px;
+    background: rgba(255,255,255,.72); box-shadow: 0 8px 30px rgba(0,0,0,.12); }
+  .tabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 6px; border-radius: 18px; font-size: 12px; font-weight: 600; color: var(--ink2); transition: transform .15s, background .15s; }
+  .tabbar button span { font-size: 22px; line-height: 1; }
+  .tabbar button:active { transform: scale(.92); background: rgba(10,132,255,.1); }
+  .mempty { text-align: center; color: var(--muted); padding: 18px 0; font-size: 14px; }
+  .ma { display: grid; grid-template-columns: 44px 1fr 40px 54px; align-items: center; gap: 10px; padding: 11px 14px; border-top: 1px solid rgba(0,0,0,.05); font-size: 14px; }
+  .ma:first-child { border-top: 0; }
+  .ma b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ma .mbar { height: 7px; border-radius: 4px; background: var(--track); overflow: hidden; }
+  .ma .mbar i { display: block; height: 100%; border-radius: 4px; transition: width .6s cubic-bezier(.2,.9,.3,1); }
+  .ma .p { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ma .w { text-align: right; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ma .err { grid-column: 2 / -1; color: var(--muted); font-size: 12.5px; }
+  /* 正在回复的终端：一道光从左扫到右 + 外圈蓝色呼吸光晕 */
+  .term.busy::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, rgba(10,132,255,.16) 47%, rgba(255,255,255,.7) 50%, rgba(10,132,255,.16) 53%, transparent 65%);
+    transform: translateX(-100%); animation: sweep 2.4s cubic-bezier(.4,0,.2,1) infinite; }
+  .term.busy { position: relative; overflow: hidden; animation: halo 2.4s ease-in-out infinite; }
+  .term.busy .dot { animation: ping 1.4s ease-out infinite; }
+  @keyframes sweep { to { transform: translateX(100%); } }
+  @keyframes halo { 50% { box-shadow: 0 0 0 1.5px rgba(10,132,255,.35), 0 6px 22px rgba(10,132,255,.22); } }
+  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(255,159,10,.55); } 100% { box-shadow: 0 0 0 8px rgba(255,159,10,0); } }
+  /* 正在回复：左边一条发光竖条；等你确认：外圈红光呼吸 */
+  .term.busy::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0;
+    background: linear-gradient(180deg, #0a84ff, #bf5af2); box-shadow: 0 0 10px rgba(10,132,255,.8); animation: glow 1.6s ease-in-out infinite; }
+  .term.waiting { animation: breathe 1.8s ease-in-out infinite; }
+  @keyframes glow { 50% { opacity: .45; box-shadow: 0 0 4px rgba(191,90,242,.5); } }
+  @keyframes breathe { 50% { box-shadow: 0 0 0 1.5px rgba(255,59,48,.45), 0 6px 22px rgba(255,59,48,.22); } }
+  /* 额度超过 90%：进度条红光闪动 */
+  .ma .mbar { overflow: visible; }
+  .ma .mbar i.hot { box-shadow: 0 0 10px rgba(255,59,48,.65); animation: hot 1.6s ease-in-out infinite; }
+  @keyframes hot { 50% { box-shadow: 0 0 3px rgba(255,59,48,.3); filter: brightness(1.15); } }
+  /* 打开首页：各块从下往上依次浮现 */
+  #home > * { animation: rise .55s cubic-bezier(.2,.9,.3,1) both; }
+  #home > :nth-child(2) { animation-delay: .04s; } #home > :nth-child(3) { animation-delay: .08s; }
+  #home > :nth-child(4) { animation-delay: .12s; } #home > :nth-child(5) { animation-delay: .16s; }
+  #home > :nth-child(6) { animation-delay: .2s; } #home > :nth-child(7) { animation-delay: .24s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  @media (prefers-reduced-motion: reduce) { .term.busy::after { animation: none; display: none; } .term.busy, .term.waiting, .term.busy::before, .ma .mbar i.hot, #home > * { animation: none; } }
+  /* 任务进度条（对话页顶部） */
+  .prog { display: none; margin: 8px 12px 0; padding: 9px 12px; border-radius: 14px; background: rgba(255,255,255,.85); font-size: 13px; }
+  .prog.show { display: block; }
+  .prog .ph { display: flex; gap: 8px; align-items: baseline; }
+  .prog .ph b { flex: none; }
+  .prog .ph span { flex: 1; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prog .ph em { flex: none; font-style: normal; color: var(--muted); }
+  .prog .pb { height: 5px; border-radius: 3px; background: var(--track); margin-top: 6px; overflow: hidden; }
+  .prog .pb i { display: block; height: 100%; background: var(--green); border-radius: 3px; transition: width .6s; }
+  .prog ul { display: none; margin: 8px 0 0; padding: 0; list-style: none; }
+  .prog.open ul { display: block; }
+  .prog li { padding: 3px 0; color: var(--ink2); }
+  .prog li.completed { color: var(--faint); text-decoration: line-through; }
+  .prog li.in_progress { color: var(--blue); font-weight: 600; }
+  .prog li::before { content: "○ "; } .prog li.completed::before { content: "✓ "; } .prog li.in_progress::before { content: "▶ "; }
+  .sec3 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 8px 4px 8px; }
+  .hint3 { font-size: 12px; color: var(--faint); margin: -2px 4px 18px; }
+  .stat { background: #fff; border-radius: 16px; padding: 12px 14px 8px; margin-bottom: 10px; }
+  .stat .sh { display: flex; align-items: baseline; gap: 8px; }
+  .stat .sh b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+  .stat .sh span { flex: none; font-size: 12.5px; color: var(--muted); }
+  .stat .sh em { font-style: normal; font-weight: 700; color: var(--blue); }
+  .bars { display: flex; gap: 6px; height: 64px; margin-top: 8px; }
+  .bc { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; }
+  .bc i { width: 100%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 2px 2px; background: var(--blue); opacity: .8; }
+  .bc:last-child i { background: var(--green); opacity: 1; }
+  .bc span { font-size: 10.5px; color: var(--faint); }
+  .cards { display: grid; gap: 6px; margin: -6px 0 14px; max-width: 85%; }
+  .webcard { display: flex; align-items: center; gap: 10px; text-align: left; background: #fff; border-radius: 16px; padding: 10px 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .webcard:active { background: rgba(10,132,255,.08); }
+  .webcard span { font-size: 22px; }
+  .webcard div { flex: 1; min-width: 0; }
+  .webcard b { display: block; font-size: 15px; color: var(--blue); }
+  .webcard small { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .webcard i { font-style: normal; font-size: 22px; color: var(--faint); }
+  /* 按住说话 */
+  /* 输入框空着时，发送键变成麦克风：按住说话 */
+  .send.mic { background: transparent; color: rgba(60,60,67,.6); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+  .send.mic svg { width: 24px; height: 24px; }
+  .send.mic.on { background: var(--green); color: #fff; transform: scale(1.15); box-shadow: 0 0 0 6px rgba(48,209,88,.2); }
+  .rec { position: fixed; inset: 0; z-index: 15; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.25); pointer-events: none; }
+  .rec.show { display: flex; }
+  .recbox { width: 170px; padding: 18px 10px 14px; border-radius: 22px; background: rgba(30,30,32,.88); color: #fff; text-align: center; }
+  .recbox.cancel { background: rgba(255,59,48,.92); }
+  .recbox b { display: block; font-size: 22px; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+  .recbox span { font-size: 13px; opacity: .85; }
+  .wave { display: flex; justify-content: center; align-items: center; gap: 4px; height: 34px; }
+  .wave i { width: 5px; height: 10px; border-radius: 3px; background: #30d158; animation: wv .9s ease-in-out infinite; }
+  .wave i:nth-child(2) { animation-delay: .12s; } .wave i:nth-child(3) { animation-delay: .24s; } .wave i:nth-child(4) { animation-delay: .36s; } .wave i:nth-child(5) { animation-delay: .48s; }
+  .recbox.cancel .wave i { background: #fff; animation: none; }
+  @keyframes wv { 50% { height: 32px; } }
+  /* 换号动画 */
+  .swa { position: fixed; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.28); backdrop-filter: blur(6px); }
+  .swa.show { display: flex; }
+  .swabox { width: 300px; padding: 22px 20px 18px; border-radius: 26px; background: rgba(255,255,255,.95); text-align: center; animation: swin .35s cubic-bezier(.2,.9,.3,1.3); }
+  @keyframes swin { from { transform: scale(.85); opacity: 0; } }
+  .swarow { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .swacc { font-size: 12.5px; font-weight: 700; color: #fff; background: #8e8e93; border-radius: 12px; padding: 5px 10px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: all .4s; }
+  .swacc.to { background: var(--blue); }
+  .swa.ok .swacc:first-child { opacity: .35; transform: scale(.9); }
+  .swa.ok .swacc.to { background: var(--green); transform: scale(1.08); }
+  .swarrow { display: flex; gap: 3px; }
+  .swarrow i { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: flow 1s infinite; opacity: .2; }
+  .swarrow i:nth-child(2) { animation-delay: .2s; } .swarrow i:nth-child(3) { animation-delay: .4s; }
+  @keyframes flow { 50% { opacity: 1; transform: translateX(3px); } }
+  .swa.ok .swarrow i { animation: none; opacity: 1; background: var(--green); }
+  .swatitle { font-size: 17px; font-weight: 700; margin: 14px 0 10px; }
+  .swa.ok .swatitle { color: var(--green); }
+  .swa.ok .swatitle::before { content: "✓ "; }
+  .swasteps { list-style: none; padding: 0; margin: 0; display: grid; gap: 7px; text-align: left; font-size: 14px; color: var(--faint); }
+  .swasteps li { display: flex; align-items: center; gap: 8px; transition: color .3s; }
+  .swasteps li::before { content: ""; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #d1d1d6; flex: none; box-sizing: border-box; }
+  .swasteps li.now { color: var(--ink); }
+  .swasteps li.now::before { border-color: var(--blue); border-top-color: transparent; animation: spin .8s linear infinite; }
+  .swasteps li.done { color: var(--ink); }
+  .swasteps li.done::before { content: "✓"; border: 0; background: var(--green); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .swanote { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .swanote a { color: var(--blue); font-weight: 600; }
+  .termtxt { margin: 0; padding: 10px 12px; font: 11.5px/1.35 ui-monospace, Menlo, monospace; color: #e5e5e7; white-space: pre-wrap; word-break: break-all; }
+  .termkeys { display: flex; gap: 6px; padding: 10px 10px calc(env(safe-area-inset-bottom) + 10px); background: #1c1c1e; }
+  .termkeys button { flex: 1; padding: 11px 0; border-radius: 12px; background: #3a3a3c; color: #fff; font-size: 15px; font-weight: 600; }
+  .termkeys button.hot { flex: 1.6; background: var(--blue); }
+  .termkeys button.esc { color: #ff6b61; }
+  .mediab { display: flex; align-items: center; justify-content: center; }
+  .mediab video { max-width: 100%; max-height: 100%; }
+  .mediaf { padding: 10px 16px calc(env(safe-area-inset-bottom) + 12px); }
+  .mediaf button { width: 100%; padding: 13px; border-radius: 14px; background: var(--blue); color: #fff; font-size: 16px; font-weight: 600; }
+  .mediaf button:disabled { opacity: .6; }
+  .webf { flex: 1; width: 100%; background: #fff; position: relative; }
+  .webf iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .bar .chg { padding-right: 4px; }
+  .bar .ttl { padding-right: 0 !important; }
+  /* 全屏页：电脑屏幕 / 历史对话 / 改动 */
+  .full { position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; background: #eef0f5; }
+  .full.show { display: flex; }
+  .full.dark { background: #111; color: #fff; }
+  .fbar { display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top) + 24px) 14px 10px; }
+  .fbar.light { background: rgba(255,255,255,.8); border-bottom: 1px solid rgba(0,0,0,.06); }
+  .fbar > button { color: var(--blue); font-size: 16px; padding: 4px; }
+  .full.dark .fbar > button { color: #64b5ff; }
+  .fbar b { flex: 1; text-align: center; font-size: 16px; }
+  .fbar span { width: 40px; }
+  .mons { flex: 1; display: flex; justify-content: center; gap: 6px; }
+  .mons button { color: #ccc; background: rgba(255,255,255,.12); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+  .mons button.on { background: #fff; color: #111; }
+  .fbody { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; }
+  .fbody.pad { padding: 12px 14px calc(env(safe-area-inset-bottom) + 20px); }
+  #scrImg { display: block; width: 100%; }
+  #scrImg.big { width: 300%; }
+  .fhint { text-align: center; font-size: 12px; color: #888; padding: 6px 0 calc(env(safe-area-inset-bottom) + 8px); }
+  .search { width: 100%; font: inherit; border: 0; outline: none; border-radius: 12px; padding: 9px 12px; background: #fff; }
+  .list { margin-top: 12px; border-radius: 16px; overflow: hidden; background: #fff; }
+  .list .it { display: block; width: 100%; text-align: left; padding: 11px 14px; border-top: 1px solid rgba(0,0,0,.05); }
+  .list .it:first-child { border-top: 0; }
+  .list .it b { display: block; font-weight: 500; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list .it small { display: block; color: var(--faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list .it .n { float: right; color: var(--muted); font-size: 12px; margin-left: 8px; }
+  .list .it .sn { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .list .it .sn mark { background: rgba(255,204,0,.35); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .diff { margin-top: 12px; border-radius: 14px; overflow: hidden; background: #fff; font: 12px/1.5 ui-monospace, Menlo, monospace; }
+  .diff .h { padding: 6px 10px; background: rgba(0,0,0,.04); color: var(--muted); font-family: -apple-system, sans-serif; }
+  .diff pre { margin: 0; padding: 6px 10px; white-space: pre-wrap; word-break: break-all; }
+  .diff .del { background: #ffecec; color: #b3261e; }
+  .diff .add { background: #e9f8ee; color: #1b6d33; }
+  /* 常用长指令 */
+  .chips2 button.snip { background: rgba(94,92,230,.12); color: #5e5ce6; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chips2 button.snip.del { background: var(--red); color: #fff; }
+  .chips2 button.save { background: none; border: 1.5px dashed rgba(10,132,255,.5); }
+  .a.picmsg { padding: 4px; width: fit-content; max-width: 85%; margin-top: -8px; }
+  .a.picmsg .pic { max-height: 360px; border-radius: 16px 16px 16px 4px; box-shadow: none; }
+  .pic { max-width: 100%; max-height: 320px; border-radius: 12px; display: block; cursor: zoom-in; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+  .seen { margin: -4px 0 14px 6px; }
+  .seen span { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+  .seen .pic { max-width: 70%; max-height: 260px; }
+  .zoom { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.9); display: none; align-items: center; justify-content: center; }
+  .zoom.show { display: flex; }
+  .zoom img { max-width: 100%; max-height: 100%; }
+  .u.pending { opacity: .65; }
+  .u small { display: block; font-size: 11px; opacity: .8; margin-top: 2px; }
+  .u .thumb { display: block; max-width: 200px; max-height: 240px; border-radius: 12px; margin: 2px 0 6px; }
+  .attach { display: none; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; }
+  .attach.show { display: flex; }
+  .att { position: relative; flex: none; }
+  .att img { width: 60px; height: 60px; object-fit: cover; border-radius: 12px; display: block; }
+  .att.loading img { opacity: .4; }
+  .att .pct { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--ink); }
+  .att button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; font-size: 14px; line-height: 22px; }
+  .tag.cx { background: #1d1d1f; }
+  .acc .setdef { margin-top: 8px; width: 100%; padding: 6px; border-radius: 12px; background: rgba(10,132,255,.1); color: var(--blue); font-weight: 600; font-size: 13.5px; }
+  .acc .defd { margin-top: 8px; text-align: center; padding: 6px; border-radius: 12px; background: var(--blue); color: #fff; font-weight: 600; font-size: 13.5px; }
+  .acc .login { margin-top: 8px; width: 100%; padding: 7px; border-radius: 12px; background: #1d1d1f; color: #fff; font-weight: 600; font-size: 14px; }
+  .lgurl { display: block; word-break: break-all; color: var(--blue); font-size: 15px; background: #fff; border-radius: 12px; padding: 10px 12px; text-decoration: none; }
+  .lgcode { font: 700 30px ui-monospace, Menlo, monospace; letter-spacing: .12em; text-align: center; background: #fff; border-radius: 14px; padding: 14px; cursor: pointer; }
+  .sechd { display: flex; align-items: center; justify-content: space-between; }
+  .new { font-size: 14px; font-weight: 600; color: var(--blue); background: rgba(10,132,255,.1); border-radius: 999px; padding: 5px 12px; margin: 10px 2px 0 0; }
+  .sheetMask { position: fixed; inset: 0; background: rgba(0,0,0,.25); display: none; align-items: flex-end; z-index: 8; }
+  .sheetMask.show { display: flex; }
+  .sheet { width: 100%; max-height: 85vh; overflow-y: auto; background: rgba(248,248,250,.97); border-radius: 24px 24px 0 0; padding: 8px 18px calc(env(safe-area-inset-bottom) + 18px); animation: up .28s cubic-bezier(.2,.9,.3,1); }
+  @keyframes up { from { transform: translateY(100%); } }
+  .grab { width: 38px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.15); margin: 0 auto 12px; }
+  .sheet h3 { margin: 0 0 6px; font-size: 20px; }
+  /* 长按卡片弹出菜单时手指还按着，别把标题当文字选中 */
+  .sheet, .sheet * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .sheet input, .sheet textarea { -webkit-user-select: text; user-select: text; }
+  .lbl { font-size: 13px; color: var(--muted); margin: 14px 2px 8px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chips button { padding: 8px 16px; border-radius: 999px; background: rgba(0,0,0,.06); font-weight: 600; }
+  .chips button.on { background: var(--blue); color: #fff; }
+  .folders { border-radius: 16px; background: #fff; overflow: hidden; }
+  .folders button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 11px 14px; border-top: 1px solid rgba(0,0,0,.05); font-size: 15px; }
+  .folders button:first-child { border-top: 0; }
+  .folders button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .folders button small { display: block; color: var(--faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .folders button::after { content: ""; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); flex: none; }
+  .folders button.on::after { border: 6px solid var(--blue); }
+  /* 换号面板：每个号一行，右边是 5 小时 / 每周额度 */
+  /* 长按账号卡片 */
+  .acc { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: transform .15s; }
+  .acc.press { transform: scale(.96); }
+  .acc .note { font-size: 11.5px; color: var(--faint); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #amList button::after { content: "›"; border: 0; width: auto; height: auto; color: var(--faint); font-size: 22px; }
+  #amList button.warn span { color: var(--red); }
+  .fld { width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; background: #fff; padding: 11px 12px; font: inherit; font-size: 16px; }
+  .dtl { background: #fff; border-radius: 16px; padding: 12px 14px; font-size: 14px; line-height: 1.7; }
+  .dtl b { font-size: 17px; }
+  .dtl svg { width: 100%; height: 70px; display: block; margin-top: 6px; }
+  .bars div { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+  .bars i { height: 8px; border-radius: 4px; background: var(--blue); min-width: 2px; }
+  #swList button::after { content: "›"; border: 0; width: auto; height: auto; color: var(--faint); font-size: 22px; }
+  #swList b { flex: none; font-size: 13px; font-weight: 600; color: var(--muted); text-align: right; }
+  .go { width: 100%; margin-top: 18px; padding: 13px; border-radius: 14px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 600; }
+  /* 提示条放在下方输入区上面，不挡顶部标题 */
+  #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 130px); left: 50%; transform: translate(-50%, 20px); opacity: 0; background: rgba(30,30,32,.9); color: #fff;
+           padding: 8px 16px; border-radius: 999px; font-size: 14px; transition: all .25s; pointer-events: none; z-index: 9; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div id="home">
+  <h1><img src="/icon.png" alt="">Remote CC</h1>
+  <div class="notice glass" id="notice" hidden></div>
+  <div class="sechd"><div class="sec" id="runHd">正在运行</div><button class="new" onclick="openSheet()">＋ 新开终端</button></div>
+  <div id="terms"></div>
+  <div class="sec" id="cxHd" hidden>Codex</div>
+  <div id="cxList"></div>
+  <div class="sechd"><div class="sec">额度</div><button class="new" onclick="$('accMask').classList.add('show')">详情 ›</button></div>
+  <div class="mini glass" id="miniAcc" onclick="$('accMask').classList.add('show')"></div>
+  <div class="sechd"><div class="sec">最近对话</div><button class="new" onclick="openHistory()">更多历史 ›</button></div>
+  <div class="mini glass" id="miniHist"><div class="mempty">读取中…</div></div>
+  <!-- 底部固定工具栏，大拇指够得着 -->
+  <div class="tabbar glass"><button onclick="openScreen()"><span>🖥</span>屏幕</button><button onclick="openStats()"><span>📊</span>用量</button><button onclick="openHistory()"><span>🕘</span>历史</button></div>
+</div>
+<div class="sheetMask" id="tsMask" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="tsTitle"></h3>
+    <div class="lbl" id="tsNote"></div>
+    <div class="folders" id="tsList"></div>
+  </div>
+</div>
+<!-- 额度详情放在底部弹窗里；写在其他弹窗前面，从这里再弹出的长按菜单才会盖在上面 -->
+<div class="sheetMask" id="accMask" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>额度</h3>
+    <div class="accs" id="accs"></div>
+  </div>
+</div>
+
+<div id="chat">
+  <div class="bar glass">
+    <button class="back" onclick="history.back()">‹ 返回</button>
+    <div class="ttl"><b id="cTitle"></b><span id="cSub"></span></div>
+    <button class="back scr" onclick="openTerm()">画面</button>
+    <button class="back chg" onclick="openChanges()">改动</button>
+  </div>
+  <div class="prog" id="prog" onclick="this.classList.toggle('open')"></div>
+  <div id="msgs" onscroll="onScroll()" ontouchmove="stickUntil = 0"></div>
+  <div class="typing" id="typing"><i></i><i></i><i></i><span>Claude 正在回复</span></div>
+  <button class="jump" id="jump" onclick="toBottom(true)">↓</button>
+  <div class="dock glass">
+    <div class="tst" id="tst"></div>
+    <div class="qa" id="qa"></div>
+    <div class="chips2" id="chips"></div>
+    <div class="attach" id="attach"></div>
+    <input type="file" id="file" accept="image/*" multiple hidden onchange="pickImages([...this.files])">
+    <div class="row">
+      <button class="kb" onclick="$('file').click()" title="发图片"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      <div class="field">
+        <textarea id="input" rows="1" placeholder="回复 Claude" oninput="grow(); drawQuick(); updSend()"></textarea>
+        <button class="send" id="sendBtn" onclick="send()"></button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="sheetMask" id="sheetMask" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>新开终端</h3>
+    <div class="lbl">用哪个号（或者开 Codex）</div>
+    <div class="chips" id="shAcc"></div>
+    <div class="lbl">在哪个文件夹</div>
+    <div class="folders" id="shDir"></div>
+    <button class="go" onclick="launch()">在电脑上打开</button>
+  </div>
+</div>
+<div class="sheetMask" id="swMask" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>换到哪个号</h3>
+    <div class="lbl" id="swNote"></div>
+    <div class="folders" id="swList"></div>
+  </div>
+</div>
+<div class="sheetMask" id="hsMask" style="z-index:13" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>用哪个号接着聊</h3>
+    <div class="lbl" id="hsNote"></div>
+    <div class="folders" id="hsList"></div>
+  </div>
+</div>
+<div class="sheetMask" id="amMask" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="amTitle"></h3>
+    <div class="lbl" id="amNote"></div>
+    <div id="amBody"></div>
+  </div>
+</div>
+<!-- 电脑屏幕 -->
+<div class="full dark" id="screen">
+  <div class="fbar"><button onclick="closeFull('screen')">关闭</button><div class="mons" id="mons"></div><button onclick="loadScreen()">刷新</button></div>
+  <div class="fbody" id="scrBox"><img id="scrImg" alt="" onclick="this.classList.toggle('big')"></div>
+  <div class="fhint" id="scrHint">点图片放大 / 缩小</div>
+</div>
+<!-- 历史对话 -->
+<div class="full" id="hist">
+  <div class="fbar light"><button onclick="closeFull('hist')">关闭</button><b>历史对话</b><span></span></div>
+  <div class="fbody pad">
+    <input class="search" id="hq" placeholder="搜索聊天内容或文件夹" oninput="onHistQ()">
+    <div class="list" id="hList" style="margin-top:12px"></div>
+  </div>
+</div>
+<!-- 网页预览：在 App 里全屏看 -->
+<div class="full" id="web">
+  <div class="fbar light"><button onclick="closeWeb()">关闭</button><b id="webTitle"></b><button onclick="loadFrame(webUrl)">刷新</button></div>
+  <div id="webBox" class="webf"></div>
+</div>
+<!-- 文字文档：md / txt / csv 在 App 里看，iPhone 主屏 App 里另开窗口没有返回键 -->
+<div class="full" id="doc">
+  <div class="fbar light"><button onclick="closeFull('doc')">关闭</button><b id="docTitle" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span></span></div>
+  <div class="fbody pad"><div class="a" id="docBox"></div></div>
+</div>
+<!-- 视频 / 音频 -->
+<div class="full dark" id="media">
+  <div class="fbar"><button onclick="closeMedia()">关闭</button><b id="mediaTitle" style="color:#fff;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span></span></div>
+  <div class="fbody mediab" id="mediaBox"></div>
+  <div class="mediaf"><button id="saveBtn" onclick="saveMedia()">保存到手机</button></div>
+</div>
+<!-- 用量账单 -->
+<div class="full" id="stats">
+  <div class="fbar light"><button onclick="closeFull('stats')">关闭</button><b>用量账单 · 近 7 天</b><span></span></div>
+  <div class="fbody pad" id="statsBody"></div>
+</div>
+<!-- 终端画面：选择框、提示这些不进对话记录，直接看窗口上的字，用按键选 -->
+<div class="full dark" id="term">
+  <div class="fbar"><button onclick="closeFull('term')">关闭</button><b style="color:#fff;font-size:15px">终端画面</b><span></span></div>
+  <pre class="fbody termtxt" id="termTxt"></pre>
+  <div class="termkeys">
+    <button onclick="tkey(['up'])">↑</button><button onclick="tkey(['down'])">↓</button>
+    <button class="hot" onclick="tkey(['enter'])">回车</button><button class="esc" onclick="tkey(['esc'])">Esc</button>
+    <button onclick="tkey(['1'])">1</button><button onclick="tkey(['2'])">2</button><button onclick="tkey(['3'])">3</button>
+  </div>
+</div>
+<!-- 改动 -->
+<div class="full" id="chg">
+  <div class="fbar light"><button id="chgBack" onclick="chgBack()">关闭</button><b id="chgTitle">改了哪些文件</b><span></span></div>
+  <div class="fbody pad" id="chgBody"></div>
+</div>
+<div class="rec" id="rec"><div class="recbox"><div class="wave"><i></i><i></i><i></i><i></i><i></i></div><b id="recSec">0"</b><span id="recTip">松开发送 · 上滑取消</span></div></div>
+<div class="sheetMask" id="lgMask" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>登录 ChatGPT 给 Codex 用</h3>
+    <div class="lbl">1. 点这个网址，登录你的 ChatGPT 付费账号</div>
+    <a id="lgUrl" class="lgurl" target="_blank"></a>
+    <div class="lbl">2. 输入这个验证码（点一下复制，15 分钟内有效）</div>
+    <div id="lgCode" class="lgcode" onclick="copyCode()"></div>
+    <div class="lbl">3. 授权完回到这里，会自动提示「登录好了」</div>
+  </div>
+</div>
+<div class="zoom" id="zoom" onclick="this.classList.remove('show')"><img id="zoomImg" alt=""></div>
+<div class="swa" id="swa" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="swabox">
+    <div class="swarow"><span class="swacc" id="swaFrom"></span><span class="swarrow"><i></i><i></i><i></i></span><span class="swacc to" id="swaTo"></span></div>
+    <div class="swatitle" id="swaTitle"></div>
+    <ul class="swasteps" id="swaSteps"></ul>
+    <div class="swanote" id="swaNote"></div>
+  </div>
+</div>
+<div id="cpPop"><button data-do="all">复制全部</button><button data-do="sel">选择文字</button></div>
+<div id="toast"></div>
+
+<script>
+// 密钥可能在 /app/密钥 路径里，也可能在 ?k= 里；都没有就靠 cookie
+const K = (location.pathname.match(/^\/app\/([\w-]+)/) || [])[1] || new URLSearchParams(location.search).get('k') || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const api = (p, body) => fetch(`${p}${p.includes('?') ? '&' : '?'}k=${encodeURIComponent(K)}`, body ? {method: 'POST', body: JSON.stringify(body)} : {})
+  .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); return d; });
+const ST = {busy: '回复中', waiting: '等你确认'};
+let running = [], cur = null, lastSig = null;
+
+function toast(msg) { $('toast').textContent = msg; $('toast').classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => $('toast').classList.remove('show'), 1800); }
+
+// ---------- 简易 Markdown：标题、列表、表格、代码块、引用、加粗、行内代码、链接 ----------
+function inline(s) {
+  return esc(s)
+    .replace(/`([^`]+)`/g, '<code onclick="copyText(this.innerText)">$1</code>')  // 命令、路径点一下就复制
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+}
+const LI = /^(\s*)([-*•]|\d+[.)])\s+(.*)/;
+const indent = s => s.match(/^\s*/)[0].length;
+function md(src) {
+  const L = src.replace(/\r/g, '').split('\n'), out = [];
+  let i = 0;
+  const cells = l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+  while (i < L.length) {
+    const l = L[i];
+    if (/^```/.test(l)) {
+      const buf = []; i++;
+      while (i < L.length && !/^```/.test(L[i])) buf.push(L[i++]);
+      i++; out.push(`<div class="prewrap"><button class="cp" onclick="copyText(this.nextElementSibling.innerText)">复制</button><pre><code>${esc(buf.join('\n'))}</code></pre></div>`); continue;
+    }
+    if (/^\s*\|.*\|\s*$/.test(l) && /^\s*\|?\s*:?-{2,}/.test(L[i + 1] || '')) {
+      const head = cells(l); i += 2; const rows = [];
+      while (i < L.length && /^\s*\|.*\|\s*$/.test(L[i])) rows.push(cells(L[i++]));
+      // 短的格子不换行，长的格子给够宽度：不然手机上会挤成一个字一行
+      const td = c => `<td class="${c.replace(/\*\*|`/g, '').length <= 12 ? 'nw' : 'lg'}">${inline(c)}</td>`;
+      out.push(`<div class="tw"><table><tr>${head.map(c => `<th>${inline(c)}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(td).join('')}</tr>`).join('')}</table></div>`);
+      continue;
+    }
+    let m;
+    if ((m = l.match(/^(#{1,4})\s+(.*)/))) { out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); i++; continue; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)) { out.push('<hr>'); i++; continue; }
+    if (/^>\s?/.test(l)) {
+      const buf = []; while (i < L.length && /^>\s?/.test(L[i])) buf.push(L[i++].replace(/^>\s?/, ''));
+      out.push(`<blockquote>${md(buf.join('\n'))}</blockquote>`); continue;
+    }
+    if ((m = l.match(LI))) {
+      // 按缩进分层：比本项缩进更深的行（子列表、代码块、续行）都归这一项，不会被当成新的同级编号
+      const base = m[1].length, ordered = /\d/.test(m[2]), buf = [];
+      while (i < L.length) {
+        const mm = L[i].match(LI);
+        if (!mm || mm[1].length !== base || /\d/.test(mm[2]) !== ordered) break;
+        i++;
+        const rest = [];
+        while (i < L.length) {
+          if (L[i].trim()) { if (indent(L[i]) > base) { rest.push(L[i++]); continue; } break; }
+          let j = i; while (j < L.length && !L[j].trim()) j++;
+          if (j < L.length && indent(L[j]) > base) { while (i < j) rest.push(L[i++]); continue; }
+          // 空行后面还是同一层的下一项，就当同一个列表
+          const nx = (L[j] || '').match(LI);
+          if (nx && nx[1].length === base && /\d/.test(nx[2]) === ordered) { i = j; break; }
+          break;
+        }
+        const cut = Math.min(...rest.filter(s => s.trim()).map(indent));
+        const sub = rest.map(s => s.slice(cut));
+        const nested = sub.some(s => LI.test(s) || /^```/.test(s) || /^\s*\|.*\|\s*$/.test(s));
+        buf.push(`<li>${inline(mm[3])}${!rest.length ? '' : nested ? md(sub.join('\n')) : ' ' + inline(sub.map(s => s.trim()).filter(Boolean).join(' '))}</li>`);
+      }
+      const start = ordered ? parseInt(m[2]) : 1;
+      out.push(ordered ? `<ol${start !== 1 ? ` start="${start}"` : ''}>${buf.join('')}</ol>` : `<ul>${buf.join('')}</ul>`); continue;
+    }
+    if (!l.trim()) { i++; continue; }
+    const buf = [];
+    while (i < L.length && L[i].trim() && !/^(```|#{1,4}\s|>|\s*([-*•]|\d+[.)])\s+|\s*\|.*\|\s*$)/.test(L[i])) buf.push(inline(L[i++]));
+    if (buf.length) out.push(`<p>${buf.join('<br>')}</p>`); else out.push(`<p>${inline(L[i++])}</p>`);
+  }
+  return out.join('');
+}
+
+// ---------- 首页：额度 + 正在运行 ----------
+const outerColor = p => p >= 90 ? 'var(--red)' : p >= 70 ? 'var(--orange)' : 'var(--green)';
+const innerColor = p => p >= 90 ? 'var(--red)' : 'var(--blue)';
+function arc(p, size, sw, color, inset) {
+  const r = (size - sw) / 2, C = 2 * Math.PI * r;
+  return `<svg width="${size}" height="${size}" style="left:${inset}px;top:${inset}px"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${sw}"/>
+    <circle class="fg" cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-dasharray="${C}" stroke-dashoffset="${C}" data-off="${C * (1 - p / 100)}"/></svg>`;
+}
+function countdown(iso) {
+  if (!iso) return '未开始';
+  let s = Math.max(0, Math.floor((new Date(iso) - Date.now()) / 1000));
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return d ? `${d}天${h}时` : h ? `${h}时${m}分` : `${m}分钟`;
+}
+let accSig = '';
+let codexAccs = [];  // Codex 的号（中转 + 登录了 ChatGPT 的）
+function accCard(name, plan, u, extra = '', id = '', note = '') {
+  const head = `<div class="acc glass" data-acc="${id}">`, nt = note ? `<div class="note">${esc(note)}</div>` : '';
+  if (u.error) return `${head}<div class="nm">${esc(name)}</div>${nt}<div class="err">${esc(u.error)}</div>${extra}</div>`;
+  const h = Math.round(u.five_hour?.percent ?? 0), w = Math.round(u.seven_day?.percent ?? 0);
+  return `${head}<div class="nm">${esc(name)}<span class="pl">${esc((plan || '').toUpperCase())}</span></div>${nt}
+    <div class="gs"><div class="rings">${arc(h, 56, 7, outerColor(h), 0)}${arc(w, 36, 7, innerColor(w), 10)}</div>
+      <div class="lg"><b style="color:${outerColor(h)}">${h}%</b>5h · ${countdown(u.five_hour?.resets_at)}<b style="color:${innerColor(w)};margin-top:3px">${w}%</b>周 · ${countdown(u.seven_day?.resets_at)}</div></div>${extra}</div>`;
+}
+async function loadAccounts() {
+  let accs, cx; try { [accs, cx] = await Promise.all([api('/api/accounts'), api('/api/codex/accounts').catch(() => [])]); } catch { return; }
+  const sig = JSON.stringify([accs, cx]); if (sig === accSig) return; accSig = sig;
+  accList = accs; codexAccs = cx;  // 左滑换号、新开终端要用
+  // 每张卡片底下：是默认就显示「默认」，不是就给个「设为默认」（之后电脑上新开的 claude / codex 都用这个号）
+  const defBtn = (a, kind) => a.is_default ? '<div class="defd">默认</div>'
+    : `<button class="setdef" onclick="setDefault('${kind}', '${a.id}')">设为默认</button>`;
+  const claude = accs.map(a => accCard('Claude · ' + a.name, a.plan, a.usage || {}, defBtn(a, 'claude'), a.id, a.note));
+  // Codex：中转号按 Key 扣钱没有额度；ChatGPT 号没登录的给个「登录」按钮
+  const nt = a => a.note ? `<div class="note">${esc(a.note)}</div>` : '';
+  const codex = cx.map(a => a.relay
+    ? `<div class="acc glass" data-acc="cx:${a.id}"><div class="nm">Codex · ${esc(a.name)}</div>${nt(a)}<div class="err">按 Key 扣费，没有额度限制</div>${defBtn(a, 'codex')}</div>`
+    : a.logged ? accCard('Codex · ' + a.name, a.usage?.plan, a.usage || {}, defBtn(a, 'codex'), 'cx:' + a.id, a.note)
+    : `<div class="acc glass" data-acc="cx:${a.id}"><div class="nm">Codex · ${esc(a.name)}</div>${nt(a)}<div class="err">还没登录</div><button class="login" onclick="codexLogin('${a.id}')">登录</button></div>`);
+  $('accs').innerHTML = [...claude, ...codex].join('');
+  // 首页精简版：每个 Claude 号一条 5 小时进度条 + 周用量
+  $('miniAcc').innerHTML = accs.map(a => {
+    const u = a.usage || {};
+    if (u.error) return `<div class="ma"><b>${esc(a.name)}</b><span class="err">${esc(u.error)}</span></div>`;
+    const h = Math.round(u.five_hour?.percent ?? 0), w = Math.round(u.seven_day?.percent ?? 0);
+    return `<div class="ma"><b>${esc(a.name)}</b><div class="mbar"><i class="${h >= 90 ? 'hot' : ''}" style="width:0;background:${outerColor(h)}" data-w="${h}"></i></div>
+      <span class="p" style="color:${outerColor(h)}">${h}%</span><span class="w">周 ${w}%</span></div>`;
+  }).join('');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('.rings .fg').forEach(c => c.style.strokeDashoffset = c.dataset.off);
+    document.querySelectorAll('.ma .mbar i').forEach(b => b.style.width = b.dataset.w + '%');
+  }));
+}
+
+let runSig = '';
+async function loadRunning() {
+  try { running = await api('/api/running'); } catch (e) { $('runHd').textContent = '连不上电脑：' + e.message; return; }
+  $('runHd').textContent = running.length ? `正在运行 · ${running.length}` : '正在运行';
+  // 滑开着的那张卡片对应的终端已经没了（比如在电脑上关掉了），就别再挂着它
+  if (openSwipe && !openSwipe.startsWith('cx') && !running.some(r => String(r.pid) === openSwipe)) openSwipe = null;
+  // 内容没变就不重画，不然扫光动画每次轮询都会从头开始
+  const sig = JSON.stringify([running, accList.length, codexAccs.length]);
+  if (sig === runSig) return;
+  drawRecent();
+  // 有卡片滑开着 / 手指正在滑的时候不重画，不然会弹回去
+  if (!openSwipe && !touching) {
+    runSig = sig;
+    $('terms').innerHTML = running.length
+      ? (accList.length > 1 ? '<div class="swipeHint">← 左滑卡片可以换号</div>' : '') + running.map(swipeHtml).join('')
+      : '<div class="empty">电脑上没有开着的 Claude 终端</div>';
+  }
+  if (cur && cur.kind !== 'codex') {
+    // 换号后终端换了一个，但对话还是同一段：按对话找，自动跟到新终端上
+    const r = running.find(x => x.pid === cur.pid) || running.find(x => x.session === cur.session);
+    if (r) { if (r.pid !== cur.pid) toast('已跟到 ' + r.acc_name + ' 的终端'); cur = r; setStatus(); }
+    else $('cSub').textContent = '这个终端已经关了';
+  }
+}
+
+// ---------- 对话页 ----------
+function setStatus() {
+  $('cSub').textContent = `${cur.acc_name} · ${ST[cur.status] || '空闲'}`;
+  $('typing').classList.toggle('show', cur.status === 'busy');
+  drawQuick();
+  autoTerm();
+  drawTermState();
+}
+
+// ---------- 模型 / 思考程度 / 权限：从终端屏幕读，点了切换 ----------
+let tst = null;
+// 和终端底部显示的名字一致
+const MODE_NAME = {bypassPermissions: 'bypass permissions', auto: 'auto mode', acceptEdits: 'accept edits', plan: 'plan mode', manual: 'default'};
+const TS_OPTS = {
+  model: [['claude-opus-5-5', 'Opus 5.5'], ['claude-sonnet-5-5', 'Sonnet 5.5'], ['claude-haiku-5-5', 'Haiku 5.5'], ['claude-fable-5-1', 'Fable 5.1']],
+  effort: [['low', 'low · 最快'], ['medium', 'medium'], ['high', 'high'], ['xhigh', 'xhigh'], ['max', 'max · 想得最深']],
+  mode: [['bypassPermissions', 'bypass permissions · 什么都不问'], ['auto', 'auto mode · 危险操作会拦'], ['acceptEdits', 'accept edits · 改文件不问，跑命令前问'],
+         ['plan', 'plan mode · 只做计划不动手'], ['manual', 'default · 每次都问']],
+};
+async function loadTermState() {
+  if (!cur || cur.kind) { tst = null; return drawTermState(); }  // Codex 没有这些
+  const pid = cur.pid;
+  try { const s = await api('/api/term_state?pid=' + pid); if (cur && cur.pid === pid) tst = s; } catch { return; }
+  drawTermState();
+}
+function drawTermState() {
+  if (!cur || !tst) { $('tst').innerHTML = ''; return; }
+  $('tst').classList.toggle('off', cur.status === 'busy');
+  $('tst').innerHTML = [['model', '模型', tst.model || '–'], ['effort', '思考', tst.effort || '–'],
+    ['mode', '权限', `<i class="${tst.mode}"></i>${esc(MODE_NAME[tst.mode] || tst.mode)}`]]
+    .map(([w, l, v]) => `<button class="${w}" onclick="pickTerm('${w}')"><small>${l}</small><b>${w === 'mode' ? v : esc(v)}</b></button>`).join('');
+}
+function pickTerm(what) {
+  // 回复中往终端打字会变成一条插话，所以不让切
+  if (cur.status === 'busy') return toast('Claude 正在回复，等它停下再切');
+  const now = what === 'model' ? tst.model : what === 'effort' ? tst.effort : tst.mode;
+  $('tsTitle').textContent = {model: '切换模型', effort: '思考程度', mode: '权限模式'}[what];
+  $('tsNote').textContent = what === 'mode' ? '只改这个终端' :
+    '会同时存成以后新开终端的默认值（所有号共用；思考程度 max 除外，只管这个终端）。对话中途切换，下一条回复会把整段对话重读一遍，慢一点、多用一些额度';
+  $('tsList').innerHTML = TS_OPTS[what].map(([v, t]) => `<button onclick="setTerm('${what}', '${v}')"><span>${t}</span><b>${(what === 'model' ? t === now : v === now) ? '✓' : ''}</b></button>`).join('');
+  $('tsMask').classList.add('show');
+}
+let tsQuietUntil = 0;
+async function setTerm(what, value) {
+  $('tsMask').classList.remove('show'); toast('正在切换…');
+  tsQuietUntil = Date.now() + 15000;
+  try { tst = await api('/api/term_set', {pid: cur.pid, what, value}); drawTermState(); toast('已切换'); }
+  catch (e) { toast('切换失败：' + e.message); }
+  tsQuietUntil = Date.now() + 5000;  // 状态要过几秒才变回空闲，这几秒也别弹
+}
+setInterval(loadTermState, 3000);
+
+// ---------- 快捷回复 ----------
+let quick = {question: null}, qStep = {id: null, i: 0};
+async function loadQuick() {
+  if (!cur || cur.kind) return;  // 选择题只有 Claude 有（Codex 桌面版 / Codex 终端都跳过）
+  try { quick = await api('/api/quick?session=' + encodeURIComponent(cur.session)); } catch { return; }
+  drawQuick();
+}
+function drawQuick() {
+  if (!cur) return;
+  const q = quick.question, waiting = cur.status === 'waiting';
+  if (q && q.id !== qStep.id) qStep = {id: q.id, i: 0};
+  const cq = q && q.questions[qStep.i];
+  // 选择题：问题 + 选项文字按钮
+  if (cq) {
+    $('qa').innerHTML = `<div class="qt">${esc(cq.q)}${cq.multi ? '<small>多选题：请直接打字告诉 Claude 选哪几个</small>' : ''}</div>
+      <div class="opts">${cq.multi ? '' : cq.options.map((o, j) => `<button onclick="pick(${j})"><b>${j + 1}</b>${esc(o)}</button>`).join('')}</div>`;
+  } else if (q && qStep.i >= q.questions.length) {
+    $('qa').innerHTML = `<div class="opts"><button onclick="key(['enter'])"><b>✓</b>提交答案</button></div>`;
+  } else $('qa').innerHTML = '';
+  $('qa').classList.toggle('show', !!$('qa').innerHTML);
+  // 一排胶囊：回复中→中断；等确认（不是选择题）→允许 / 拒绝；平时→常用回复
+  const chips = [];
+  if (cur.status === 'busy' && cur.kind !== 'codex') chips.push(`<button class="stop" onclick="key(['esc'])">■ 中断</button>`);
+  if (waiting && !q) chips.push(`<button class="ok" onclick="key(['enter'])">允许</button>`, `<button class="stop" onclick="key(['esc'])">拒绝</button>`);
+  if (!q && cur.status !== 'busy') {
+    // 从我上一条消息里读出「回『执行』」「回编号」这类，做成按钮
+    const s = suggest();
+    chips.push(...s.map(r => `<button onclick="fillIn(${esc(JSON.stringify(r))})">${esc(r)}</button>`));
+  }
+  if (!q) {
+    // 存下来的常用长指令：点一下发出去，长按变红后再点一下删掉
+    chips.push(...snips.map((s, i) => `<button class="snip${snipDel === i ? ' del' : ''}" data-i="${i}" onclick="tapSnip(${i})">${snipDel === i ? '删除？' : esc(s)}</button>`));
+    const typed = $('input').value.trim();
+    if (typed.length > 6 && !snips.includes(typed)) chips.push(`<button class="save" onclick="saveSnip()">＋存为按钮</button>`);
+  }
+  $('chips').innerHTML = chips.join('');
+}
+
+// ---------- 跟着上一条消息变的快捷回复 ----------
+function suggest() {
+  // 只看对话最后一条：如果最后是你发的，说明我还没回，不出按钮
+  const last = [...lastMs].reverse().find(m => m.kind === 'text');
+  if (!last || last.role !== 'assistant') return [];
+  const t = last.text;
+  // 「回『执行』」「回复『删』」「回一句『加』」→ 执行 / 删 / 加
+  // 只认「就回『X』」「请回」「，回」这种在让你回复的说法；「阿娟回『…』」这种剧情台词不算（引号里也不能带标点）
+  const words = [...new Set([...t.matchAll(/(?:^|[就请，。、；？！：?!:\s（(]|或者|直接)回(?:复|一句|个)?\s*[「“"]([^」”"\n，,。！？]{1,10})[」”"]/gm)].map(m => m[1].replace(/\*/g, '').trim()).filter(Boolean))];
+  // 让你挑编号时，列出来的编号也做成按钮，点一下直接发
+  if (/编号|回\s*\d|挑/.test(t)) {
+    const found = [...t.matchAll(/^\s*(?:[-*]\s*)?(?:\*\*)?(\d{1,2})(?:\*\*)?\s*[.、)）]/gm), ...t.matchAll(/^\|\s*(?:\*\*)?(\d{1,2})(?:\*\*)?\s*\|/gm)].map(m => m[1]);
+    words.push(...[...new Set(found)].sort((a, b) => a - b));
+  }
+  return words.length ? words : ['继续'];
+}
+
+// ---------- 常用长指令 ----------
+let snips = [], snipDel = null, pressT = null;
+api('/api/snippets').then(s => { snips = s; drawQuick(); }).catch(() => {});
+async function saveSnips() { await api('/api/snippets', {items: snips}); drawQuick(); }
+function saveSnip() { snips.push($('input').value.trim()); saveSnips(); toast('存好了，以后点一下就发'); }
+function tapSnip(i) {
+  if (pressT === 'long') { pressT = null; return; }  // 刚长按完，这次点击不算
+  if (snipDel === i) { snips.splice(i, 1); snipDel = null; saveSnips(); toast('删掉了'); return; }
+  snipDel = null; fillIn(snips[i]);
+}
+// 点快捷回复 / 长指令：先填进输入框（已经有字就接在后面，比如 1 再点 3 → 「1 3」），用下面的发送键发
+function fillIn(text) {
+  const t = $('input');
+  t.value = t.value.trim() ? t.value.trim() + ' ' + text : text;
+  grow(); updSend(); drawQuick();
+}
+document.addEventListener('touchstart', e => {
+  const b = e.target.closest('.snip'); if (!b) return;
+  pressT = setTimeout(() => { snipDel = +b.dataset.i; pressT = 'long'; drawQuick(); }, 600);
+}, {passive: true});
+document.addEventListener('touchend', () => { if (pressT && pressT !== 'long') { clearTimeout(pressT); pressT = null; } });
+
+// ---------- 全屏页 ----------
+function openFull(id) { $(id).classList.add('show'); history.pushState({full: id}, ''); }
+function closeFull(id) { history.back(); }
+// 返回手势：先关全屏页，这一次不再往下关对话页
+let popHandled = false;
+window.addEventListener('popstate', () => {
+  const f = document.querySelector('.full.show');
+  if (f) {
+    f.classList.remove('show'); popHandled = true;
+    if (f.id === 'web') $('webBox').replaceChildren();
+    if (f.id === 'media') { $('mediaBox').innerHTML = ''; mediaBlob = null; }  // 关掉就停止播放
+  }
+});
+
+// 电脑屏幕：有几块屏就给几个按钮，外加「全部」
+let monIdx = '', monCount = 1;
+async function openScreen() {
+  openFull('screen');
+  monCount = (await api('/api/monitors')).count;
+  drawMons(); loadScreen();
+}
+function drawMons() {
+  const opts = [['', '全部'], ...Array.from({length: monCount}, (_, i) => [String(i), `屏幕${i + 1}`])];
+  $('mons').innerHTML = monCount > 1 ? opts.map(([v, t]) => `<button class="${v === monIdx ? 'on' : ''}" onclick="monIdx='${v}';drawMons();loadScreen()">${t}</button>`).join('') : '';
+}
+function loadScreen() {
+  $('scrHint').textContent = '截图中…';
+  const img = $('scrImg');
+  img.onload = () => { $('scrHint').textContent = '点图片放大 / 缩小 · ' + new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit', second: '2-digit'}); };
+  img.src = `/api/screen?i=${monIdx}&k=${encodeURIComponent(K)}&t=${Date.now()}`;
+}
+
+// 历史对话
+let hist = [], histSeq = 0;
+async function openHistory() {
+  openFull('hist');
+  $('hList').innerHTML = '<div class="empty">读取中…</div>';
+  [, accList] = await Promise.all([loadHistory(), api('/api/accounts')]);
+}
+// 有关键词就让电脑在全部聊天内容里搜，没有就列最近的
+async function loadHistory() {
+  const q = $('hq').value.trim(), seq = ++histSeq;
+  if (q) $('hList').innerHTML = '<div class="empty">搜索中…</div>';
+  const s = await api('/api/sessions' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  if (seq !== histSeq) return;  // 输入又变了，这次结果作废
+  hist = s; drawHistory(q);
+}
+function onHistQ() { clearTimeout(onHistQ.t); onHistQ.t = setTimeout(loadHistory, 350); }
+function hiWords(text, q) {
+  const words = q.split(/\s+/).filter(Boolean).map(w => esc(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return words.length ? esc(text).replace(new RegExp(words.join('|'), 'gi'), m => `<mark>${m}</mark>`) : esc(text);
+}
+function drawHistory(q = '') {
+  const live = new Set(running.map(r => r.session));
+  $('hList').innerHTML = hist.slice(0, 60).map(s => `<button class="it" onclick="resumeHist('${s.id}')">
+      <span class="n">${live.has(s.id) ? '正在运行' : fmtTime(s.mtime)}</span><b>${hiWords(s.title, q)}</b>${s.snip ? `<span class="sn">${hiWords(s.snip, q)}</span>` : ''}<small>${esc(s.cwd)}</small></button>`).join('')
+    || '<div class="empty">没有找到</div>';
+}
+function fmtTime(t) {
+  const d = new Date(t * 1000), now = new Date();
+  const hm = d.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
+  return d.toDateString() === now.toDateString() ? `今天 ${hm}` : `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+}
+// 首页「最近对话」：最近几段没在运行的，点一下和历史页一样弹出选号
+let recent = null;
+async function loadRecent() {
+  try { recent = await api('/api/sessions'); } catch { return; }
+  drawRecent();
+}
+function drawRecent() {
+  if (!recent) return;  // 还没读到
+  const live = new Set(running.map(r => r.session));
+  const sig = JSON.stringify([recent[0]?.id, recent[0]?.mtime, [...live]]);
+  if (sig === drawRecent.sig) return; drawRecent.sig = sig;  // 没变化就不重画
+  $('miniHist').innerHTML = recent.filter(s => !live.has(s.id)).slice(0, 6).map(s => `<button class="mh" onclick="resumeHist('${s.id}')">
+      <div class="l1"><b>${esc(s.title)}</b><span class="tm">${fmtTime(s.mtime)}</span></div><small>${esc(s.cwd)}</small></button>`).join('')
+    || '<div class="mempty">还没有历史对话</div>';
+}
+// 从历史页点的才需要先退出历史页
+const leaveHist = () => { if ($('hist').classList.contains('show')) history.back(); };
+async function resumeHist(id) {
+  const s = hist.find(x => x.id === id) || recent?.find(x => x.id === id);
+  // 已经开着的就直接进去，不重复开
+  const r = running.findIndex(x => x.session === id);
+  if (r >= 0) { leaveHist(); setTimeout(() => openChat(r), 50); return; }
+  // 没开着就弹出选号，每个号顺带显示用量，免得选到快用完的
+  const pct = (u, k) => u && !u.error && u[k]?.percent != null ? Math.round(u[k].percent) + '%' : '–';
+  $('hsNote').textContent = s.title;
+  $('hsList').innerHTML = accList.map(a => `<button onclick="$('hsMask').classList.remove('show'); launchHist('${id}', '${a.id}')">
+    <span>Claude · ${esc(a.name)}<small>${a.usage?.error ? esc(a.usage.error) : a.is_default ? '默认号' : ''}</small></span><b>5h ${pct(a.usage, 'five_hour')}<br>周 ${pct(a.usage, 'seven_day')}</b></button>`).join('');
+  $('hsMask').classList.add('show');
+}
+async function launchHist(id, acc) {
+  const s = hist.find(x => x.id === id) || recent?.find(x => x.id === id);
+  const before = new Set(running.map(x => x.pid)), to = 'Claude · ' + (accList.find(a => a.id === acc)?.name || '');
+  leaveHist();
+  openAnim('历史对话', to, ['发送到电脑', `用 ${to} 打开`, '接上对话']);
+  try { await api('/api/launch', {acc, cwd: s.cwd, session: id}); } catch (e) { $('swa').classList.remove('show'); return toast('打开失败：' + e.message); }
+  swAnim('历史对话', to, 1);
+  waitNew = {before, acc, session: id, until: Date.now() + 40000, from: '历史对话', to};
+}
+
+// 网页预览：回复里提到的本地网页（localhost:端口 或 .html 文件），点卡片在 App 里全屏打开
+const LOCAL_RE = /https?:\/\/(?:localhost|127\.0\.0\.1):(\d{2,5})(\/[^\s`'"<>)）]*)?/gi;
+const HTML_RE = /[A-Za-z]:\\[^\s`'"<>|*?\n]+?\.html?\b/gi;
+function webCards(text) {
+  const cards = [], seen = new Set();
+  for (const m of text.matchAll(LOCAL_RE)) {
+    const k = m[1] + (m[2] || '');
+    if (+m[1] === 8765 || seen.has(k)) continue;
+    seen.add(k);
+    cards.push(`<button class="webcard" onclick="openWeb('port', '${m[1]}', ${esc(JSON.stringify(m[2] || '/'))})"><span>🌐</span><div><b>打开预览</b><small>localhost:${m[1]}${esc(m[2] || '')}</small></div><i>›</i></button>`);
+  }
+  for (const p of new Set(text.match(HTML_RE) || [])) {
+    cards.push(`<button class="webcard" onclick="openWeb('file', ${esc(JSON.stringify(p))})"><span>🌐</span><div><b>打开预览</b><small>${esc(p.split('\\').at(-1))}</small></div><i>›</i></button>`);
+  }
+  return cards.join('');
+}
+async function openWeb(kind, a, path) {
+  toast('正在打开…');
+  try {
+    const r = kind === 'port' ? await api('/api/preview', {port: +a}) : await api('/api/pvurl?path=' + encodeURIComponent(a));
+    $('webTitle').textContent = r.title || '网页预览';
+    openFull('web');
+    loadFrame(kind === 'port' ? r.url.replace(/\/$/, '') + (path || '/') : r.url);
+  } catch (e) { toast('打开失败：' + e.message); }
+}
+// ---------- 发送键：输入框空着时是麦克风（按住说话），一打字就变回发送 ----------
+const micMode = () => !$('input').value.trim() && !attachments.length;
+const ICON_SEND = '<svg viewBox="0 0 24 24"><path d="M12 19V5.5M5.8 11.5 12 5.3l6.2 6.2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_MIC = '<svg viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="11.5" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+function updSend() {
+  const m = micMode();
+  if ($('sendBtn').classList.contains('mic') === m && $('sendBtn').innerHTML) return;  // 没变就不重画
+  $('sendBtn').classList.toggle('mic', m);
+  $('sendBtn').innerHTML = m ? ICON_MIC : ICON_SEND;
+}
+
+// ---------- 按住说话：松手在电脑上转成文字发给 Claude，上滑取消 ----------
+let recorder = null, recChunks = [], recStart = 0, recY = 0, recCancel = false, recTimer = null, micStream = null, micIdle = null;
+const mic = $('sendBtn');
+mic.addEventListener('touchstart', async e => {
+  if (!micMode()) return;  // 有字的时候它就是普通的发送键
+  e.preventDefault();
+  if (recorder || !cur) return;
+  recY = e.touches[0].clientY; recCancel = false;
+  // iPhone 主屏幕 App 每次重新要麦克风都会弹授权：要到一次就先留着，3 分钟没再用才关掉
+  clearTimeout(micIdle);
+  if (!micStream || micStream.getTracks().every(t => t.readyState === 'ended')) {
+    try { micStream = await navigator.mediaDevices.getUserMedia({audio: true}); }
+    catch { return toast('没有麦克风权限：到「设置 → Remote CC」里打开'); }
+  }
+  recChunks = [];
+  recorder = new MediaRecorder(micStream);
+  recorder.ondataavailable = ev => ev.data.size && recChunks.push(ev.data);
+  recorder.onstop = () => {
+    micIdle = setTimeout(() => { micStream?.getTracks().forEach(t => t.stop()); micStream = null; }, 180000);
+    finishRec();
+  };
+  recorder.start();
+  recStart = Date.now();
+  mic.classList.add('on'); $('rec').classList.add('show');
+  document.querySelector('.recbox').classList.remove('cancel'); $('recTip').textContent = '松开发送 · 上滑取消';
+  $('recSec').textContent = '0"';
+  recTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - recStart) / 1000);
+    $('recSec').textContent = s + '"';
+    if (s >= 59) endRec();  // 最长一分钟
+  }, 200);
+}, {passive: false});
+mic.addEventListener('touchmove', e => {
+  if (!recorder) return;
+  recCancel = recY - e.touches[0].clientY > 60;  // 往上滑超过一点就算取消
+  document.querySelector('.recbox').classList.toggle('cancel', recCancel);
+  $('recTip').textContent = recCancel ? '松开取消' : '松开发送 · 上滑取消';
+}, {passive: true});
+const endRec = () => {
+  if (!recorder) return;
+  clearInterval(recTimer);
+  mic.classList.remove('on'); $('rec').classList.remove('show');
+  if (recorder.state !== 'inactive') recorder.stop();
+};
+mic.addEventListener('touchend', endRec);
+mic.addEventListener('touchcancel', () => { recCancel = true; endRec(); });
+async function finishRec() {
+  const r = recorder; recorder = null;
+  if (recCancel) return;
+  if (Date.now() - recStart < 600) return toast('说话时间太短');
+  const blob = new Blob(recChunks, {type: r.mimeType || 'audio/mp4'});
+  const tag = {text: '🎤 识别中…'};
+  pending.push(tag); paint(false); toBottom(true);
+  try {
+    const res = await fetch(`/api/stt?k=${encodeURIComponent(K)}`, {method: 'POST', headers: {'Content-Type': blob.type}, body: blob}).then(x => x.json());
+    pending = pending.filter(p => p !== tag);
+    if (!res.text) { paint(false); return toast(res.error ? '识别失败：' + res.error : '没听清，再说一次'); }
+    send(res.text);
+  } catch (e) { pending = pending.filter(p => p !== tag); paint(false); toast('识别失败：' + e.message); }
+}
+
+// ---------- Claude 做好的文件：视频在手机上播放 / 存相册，表格文档用 iPhone 自带预览打开 ----------
+const FILE_RE = /[A-Za-z]:\\[^\s`'"<>|*?\n]+?\.(?:mp4|mov|m4v|webm|mp3|wav|m4a|pdf|xlsx|xls|csv|docx|pptx|txt|md|zip|psd)\b/gi;
+const FICON = {video: '🎬', audio: '🎵', doc: '📄', file: '📦'};
+const finfo = {};  // 文件名、大小、类型，问过一次就记住
+function fileCards(text) {
+  return [...new Set(text.match(FILE_RE) || [])].map(p => {
+    const i = finfo[p];
+    if (i && !i.ok) return '';  // 文件不存在 / 不能给，就不出卡片
+    const name = p.split('\\').at(-1);
+    return `<button class="webcard" data-file="${esc(p)}" onclick="openFile(this.dataset.file)"><span>${i ? FICON[i.kind] || '📎' : '📎'}</span>
+      <div><b>${esc(name)}</b><small>${i ? fmtSize(i.size) + ' · 点开' + (i.kind === 'video' || i.kind === 'audio' ? '播放' : '查看') : '读取中…'}</small></div><i>${i?.kind === 'audio' ? '' : '›'}</i></button>`;
+  }).join('');
+}
+const fmtSize = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+async function fillFileInfo() {
+  const todo = [...document.querySelectorAll('[data-file]')].map(b => b.dataset.file).filter(p => !finfo[p]);
+  if (!todo.length) return;
+  await Promise.all([...new Set(todo)].map(async p => { try { finfo[p] = await api('/api/finfo?path=' + encodeURIComponent(p)); } catch { finfo[p] = {ok: false}; } }));
+  paint(false);
+}
+const dlUrl = (p, save) => `/api/dl?path=${encodeURIComponent(p)}&k=${encodeURIComponent(K)}${save ? '&save=1' : ''}`;
+let mediaPath = '', mediaBlob = null;
+// 音频：就在对话里播放，不跳全屏；同一时间只放一首
+const player = new Audio();
+let playing = null;
+const mmss = s => isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : '--:--';
+function audioCards() { return document.querySelectorAll(`[data-file="${CSS.escape(playing || '')}"]`); }
+function showAudio() {
+  // 对话会时不时整段重画，按文件找到卡片再更新上面的图标和进度
+  audioCards().forEach(b => {
+    b.querySelector('span').textContent = player.paused ? '🎵' : '⏸';
+    b.querySelector('small').textContent = `${mmss(player.currentTime)} / ${mmss(player.duration)} · 点一下${player.paused ? '继续' : '暂停'}`;
+  });
+}
+player.addEventListener('timeupdate', showAudio);
+player.addEventListener('pause', showAudio);
+player.addEventListener('play', showAudio);
+player.addEventListener('ended', () => { showAudio(); });
+function toggleAudio(p) {
+  if (playing !== p) {
+    audioCards().forEach(b => { b.querySelector('span').textContent = '🎵'; b.querySelector('small').textContent = '点开播放'; });
+    playing = p; player.src = dlUrl(p); player.play().catch(e => toast('播放不了：' + e.message));
+  } else if (player.paused) player.play(); else player.pause();
+}
+
+function openFile(p) {
+  const i = finfo[p] || {};
+  if (i.kind === 'audio') return toggleAudio(p);
+  if (i.kind === 'video') {
+    mediaPath = p; mediaBlob = null;
+    $('mediaTitle').textContent = p.split('\\').at(-1);
+    $('mediaBox').innerHTML = `<video src="${dlUrl(p)}" controls playsinline autoplay></video>`;
+    openFull('media');
+    preloadMedia();  // 一打开就在后台下载好，等你点「保存」时一下就能弹出分享菜单
+  } else if (/\.(md|txt|csv)$/i.test(p)) {
+    openDoc(p);
+  } else {
+    // 表格、PDF、文档：交给 iPhone 自带的预览，里面可以存到「文件」或转发；压缩包这类直接下载
+    window.open(dlUrl(p, i.kind === 'file'), '_blank');
+  }
+}
+async function openDoc(p) {
+  try {
+    const t = await (await fetch(dlUrl(p))).text();
+    $('docTitle').textContent = p.split('\\').at(-1);
+    $('docBox').innerHTML = /\.md$/i.test(p) ? md(t) : `<div style="white-space:pre-wrap">${esc(t)}</div>`;
+    openFull('doc');
+  } catch (e) { toast('打开失败：' + e.message); }
+}
+async function preloadMedia() {
+  // iPhone 只允许「点一下」马上弹分享菜单，点了再下载就来不及了，所以打开视频时就先下载好
+  const b = $('saveBtn'), path = mediaPath;
+  b.disabled = true; b.textContent = '准备保存…';
+  try {
+    const r = await fetch(dlUrl(path));
+    const f = new File([await r.blob()], path.split('\\').at(-1), {type: r.headers.get('Content-Type') || 'video/mp4'});
+    if (path !== mediaPath) return;  // 下载期间已经换了别的视频
+    mediaBlob = f; b.textContent = '存到相册 / 分享'; b.disabled = false;
+  } catch (e) { if (path === mediaPath) { b.textContent = '下载失败，点这里重试'; b.disabled = false; } }
+}
+async function saveMedia() {
+  if (!mediaBlob) return preloadMedia();
+  try { await navigator.share({files: [mediaBlob]}); }
+  catch (e) { if (e.name !== 'AbortError') window.open(dlUrl(mediaPath, true), '_blank'); }  // 不支持分享就直接下载
+}
+function closeMedia() { $('mediaBox').innerHTML = ''; mediaBlob = null; history.back(); }
+
+// 每次都换一个新的内嵌窗口：给旧窗口改地址会在「返回」记录里多留一步，关闭就得按两次
+let webUrl = '';
+function loadFrame(url) {
+  webUrl = url;
+  const f = document.createElement('iframe');
+  f.src = url;
+  $('webBox').replaceChildren(f);
+}
+function closeWeb() {
+  $('webBox').replaceChildren();  // 先把内嵌网页拆掉，它在里面点出来的「返回」记录也跟着清掉
+  history.back();
+}
+
+// 任务进度：Claude 列了任务清单时，对话页顶部显示做到第几项、大概还要多久
+async function loadProgress() {
+  if (!cur || cur.kind) return;  // 任务进度只看 Claude 的
+  let p; try { p = await api('/api/progress?session=' + encodeURIComponent(cur.session)); } catch { return; }
+  // 全做完超过 10 分钟就不再显示
+  const show = p && (p.done < p.total || (p.last_done && Date.now() / 1000 - p.last_done < 600));
+  $('prog').classList.toggle('show', !!show);
+  if (!show) return;
+  const eta = p.eta == null ? '' : p.eta < 60 ? '不到 1 分钟' : `约 ${Math.round(p.eta / 60)} 分钟`;
+  $('prog').innerHTML = `<div class="ph"><b>${p.done === p.total ? '✓ 全部完成' : `进度 ${p.done}/${p.total}`}</b>
+      <span>${p.done < p.total && p.current ? '正在：' + esc(p.current) : ''}</span><em>${p.done < p.total ? eta : ''}</em></div>
+    <div class="pb"><i style="width:${Math.round(p.done / p.total * 100)}%"></i></div>
+    <ul>${p.items.map(t => `<li class="${t.status}">${esc(t.subject)}</li>`).join('')}</ul>`;
+}
+setInterval(loadProgress, 3000);
+
+async function setDefault(kind, id) {
+  try {
+    await api(kind === 'claude' ? '/api/default' : '/api/codex/default', {acc: id});
+    toast(`已设为默认：之后电脑上新开的 ${kind === 'claude' ? 'claude' : 'codex'} 都用这个号`);
+  } catch (e) { toast('没成功：' + e.message); }
+  accSig = ''; loadAccounts();
+}
+
+// ---------- Codex 号登录：电脑在后台生成网址和验证码，你在手机上打开网址、输入验证码 ----------
+async function codexLogin(id) {
+  toast('正在生成验证码…');
+  let r; try { r = await api('/api/codex/login', {acc: id}); } catch (e) { return toast('没成功：' + e.message); }
+  $('lgUrl').href = r.url; $('lgUrl').textContent = r.url; $('lgCode').textContent = r.code;
+  $('lgMask').classList.add('show');
+  // 等你授权完：电脑那边登录好了，这边就自动关掉
+  const t = setInterval(async () => {
+    const cx = await api('/api/codex/accounts').catch(() => null);
+    if (cx && cx.find(a => a.id === id)?.logged) { clearInterval(t); $('lgMask').classList.remove('show'); toast('登录好了'); accSig = ''; loadAccounts(); }
+    if (!$('lgMask').classList.contains('show')) clearInterval(t);
+  }, 3000);
+}
+// ---------- 长按账号卡片：这个号的菜单 ----------
+let amAcc = null, accPressT = null, pressed = false;
+const accOf = id => id.startsWith('cx:')
+  ? (a => a && {...a, id, cx: true, full: 'Codex · ' + a.name})(codexAccs.find(a => 'cx:' + a.id === id))
+  : (a => a && {...a, full: 'Claude · ' + a.name})(accList.find(a => a.id === id));
+document.addEventListener('touchstart', e => {
+  const c = e.target.closest('.acc[data-acc]'); if (!c) return;
+  pressed = false; c.classList.add('press');
+  accPressT = setTimeout(() => { pressed = true; c.classList.remove('press'); navigator.vibrate?.(10); accMenu(c.dataset.acc); }, 480);
+}, {passive: true});
+const unpress = () => { clearTimeout(accPressT); document.querySelectorAll('.acc.press').forEach(c => c.classList.remove('press')); };
+document.addEventListener('touchmove', unpress, {passive: true});
+document.addEventListener('touchend', () => { unpress(); if (pressed) getSelection()?.removeAllRanges(); }, {passive: true});
+// 长按松手时别顺带点到卡片上的「设为默认」
+document.addEventListener('click', e => { if (pressed && e.target.closest('.acc')) { e.stopPropagation(); e.preventDefault(); pressed = false; } }, true);
+document.addEventListener('contextmenu', e => { if (e.target.closest('.acc')) e.preventDefault(); });
+
+function accMenu(id) {
+  const a = accOf(id); if (!a) return;
+  amAcc = id;
+  const n = running.filter(r => r.acc === id).length;
+  const items = [
+    ['用这个号开终端', 'amLaunch()'],
+    ['刷新额度', 'amRefresh()'],
+    n ? [`一键全换走（${n} 个终端）`, 'amEvacuate()', 'warn'] : null,
+    a.relay ? null : ['额度详情', 'amDetail()'],
+    a.relay ? null : ['在电脑上打开网页版', 'amWeb()'],
+    a.relay ? null : [a.usage?.error || a.logged === false ? '登录' : '重新登录', 'amLogin()'],
+    ['改名 / 备注', 'amEdit()'],
+    id === 'main' || id === 'cx:relay' ? null : ['删除这个号', 'amRemove()', 'warn'],  // 主号、原来的 Codex 号不能删
+  ].filter(Boolean);
+  $('amTitle').textContent = a.full;
+  $('amNote').textContent = a.note || a.email || '';
+  $('amBody').innerHTML = `<div class="folders" id="amList">${items.map(([t, f, c]) => `<button class="${c || ''}" onclick="${f}"><span>${t}</span></button>`).join('')}</div>`;
+  $('amMask').classList.add('show');
+}
+const amClose = () => $('amMask').classList.remove('show');
+async function amLaunch() { amClose(); await openSheet(); pickAcc(amAcc); }
+async function amRefresh() {
+  amClose(); toast('正在查…');
+  try {
+    const u = await api('/api/acc/refresh', {acc: amAcc});
+    toast(u.error ? u.error : `5 小时 ${Math.round(u.five_hour?.percent ?? 0)}% · 每周 ${Math.round(u.seven_day?.percent ?? 0)}%`);
+  } catch (e) { toast('没查到：' + e.message); }
+  accSig = ''; loadAccounts();
+}
+async function amEvacuate() {
+  const a = accOf(amAcc), n = running.filter(r => r.acc === amAcc).length;
+  if (!confirm(`把 ${a.full} 的 ${n} 个终端全部换到额度最多的号？正在回复的会被打断。`)) return;
+  amClose(); toast('正在换…');
+  try { const r = await api('/api/acc/evacuate', {acc: amAcc}); toast(`已把 ${r.count} 个终端换到 ${r.to}`); }
+  catch (e) { toast('没换成：' + e.message); }
+  setTimeout(loadRunning, 2500);
+}
+async function amWeb() { amClose(); try { await api('/api/acc/web', {acc: amAcc}); toast('已在电脑上打开'); } catch (e) { toast('没打开：' + e.message); } }
+async function amLogin() {
+  amClose();
+  if (amAcc.startsWith('cx:')) return codexLogin(amAcc.slice(3));  // Codex 号在手机上直接输验证码
+  const a = accOf(amAcc);
+  try {
+    await api('/api/acc/login', {acc: amAcc});
+    toast(a.usage?.error ? '电脑上开了终端，会弹出这个号的登录页' : '电脑上开了终端，在里面输入 /login 就能重新登录');
+  } catch (e) { toast('没打开：' + e.message); }
+}
+async function amRemove() {
+  const a = accOf(amAcc);
+  if (!confirm(`删除 ${a.full}？\n这个号在电脑上的登录信息${a.cx ? '' : '和它专用的浏览器'}会一起删掉，以后要用得重新登录。对话记录是共用的，不会删。`)) return;
+  amClose();
+  try { await api('/api/acc/remove', {acc: amAcc}); toast('已删除 ' + a.full); } catch (e) { toast('没删：' + e.message); }
+  accSig = ''; loadAccounts();
+}
+function amEdit() {
+  const a = accOf(amAcc);
+  $('amBody').innerHTML = `<div class="lbl">名字${a.relay ? '（中转号不能改名）' : ''}</div>
+    <input class="fld" id="amName" value="${esc(a.name)}" ${a.relay ? 'disabled' : ''}>
+    <div class="lbl">备注（显示在卡片上）</div>
+    <textarea class="fld" id="amNoteIn" rows="3" placeholder="比如：卖家团队号，10-21 被关了 Claude Code">${esc(a.note || '')}</textarea>
+    <button class="go" onclick="amSave()">保存</button>`;
+}
+async function amSave() {
+  try {
+    await api('/api/acc/rename', {acc: amAcc, name: $('amName').value, note: $('amNoteIn').value});
+    amClose(); toast('已保存'); accSig = ''; loadAccounts();
+  } catch (e) { toast('没保存：' + e.message); }
+}
+async function amDetail() {
+  $('amBody').innerHTML = '<div class="dtl">读取中…</div>';
+  let d; try { d = await api('/api/acc/detail?acc=' + encodeURIComponent(amAcc)); } catch (e) { $('amBody').innerHTML = `<div class="dtl">${esc(e.message)}</div>`; return; }
+  const u = d.usage || {}, when = iso => iso ? new Date(iso).toLocaleString('zh-CN', {month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit'}) : '还没开始计时';
+  const pct = k => u[k]?.percent == null ? '–' : Math.round(u[k].percent) + '%';
+  // 最近 24 小时的 5 小时额度曲线
+  let chart = '';
+  if ((d.points || []).length > 1) {
+    const t0 = Date.now() / 1000 - 86400, xy = d.points.map(([t, h]) => `${((t - t0) / 86400 * 300).toFixed(1)},${(66 - h * .62).toFixed(1)}`).join(' ');
+    chart = `<div class="lbl" style="margin:12px 0 0">最近 24 小时 · 5 小时额度</div><svg viewBox="0 0 300 70" preserveAspectRatio="none">
+      <line x1="0" y1="4" x2="300" y2="4" stroke="rgba(0,0,0,.08)" stroke-dasharray="3 3"/><line x1="0" y1="66" x2="300" y2="66" stroke="rgba(0,0,0,.08)"/>
+      <polyline points="${xy}" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  const days = Object.entries(d.daily || {}).sort().slice(-7), mx = Math.max(1, ...days.map(x => x[1]));
+  const bars = days.length ? `<div class="lbl" style="margin:12px 0 4px">每天用掉的周额度</div><div class="bars">${days.map(([k, v]) =>
+    `<div><span style="width:38px">${k.slice(5)}</span><i style="width:${v / mx * 70}%"></i><span>${v}%</span></div>`).join('')}</div>` : '';
+  const eta = d.eta ? `<div style="color:var(--orange)">照最近 1 小时的速度，约 <b style="font-size:14px">${new Date(d.eta * 1000).toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})}</b> 用完 5 小时额度</div>` : '';
+  $('amBody').innerHTML = u.error ? `<div class="dtl">${esc(u.error)}</div>` : `<div class="dtl">
+    <div>5 小时 <b>${pct('five_hour')}</b> · ${when(u.five_hour?.resets_at)} 重置</div>
+    <div>每周 <b>${pct('seven_day')}</b> · ${when(u.seven_day?.resets_at)} 重置</div>${eta}${chart}${bars}</div>`;
+}
+
+function copyCode() { navigator.clipboard?.writeText($('lgCode').textContent).then(() => toast('验证码已复制'), () => {}); }
+
+// ---------- Codex：首页列出最近几段，点进去看对话、接着聊（在电脑后台接着跑） ----------
+let codexList = [];
+async function loadCodex() {
+  try { codexList = await api('/api/codex'); } catch { return; }
+  const recent = codexList.filter(c => Date.now() / 1000 - c.mtime < 3 * 86400).slice(0, 5);  // 只放最近 3 天的
+  $('cxHd').hidden = !recent.length;
+  // 跟终端卡片一样能左滑：正在跑时有「停止」，都有「隐藏」；滑开着 / 手指在滑的时候不重画
+  if (!(openSwipe || '').startsWith('cx') && !touching) {
+    $('cxList').innerHTML = recent.map(c => {
+      const acts = (c.status === 'busy' ? `<button onclick="cxAct('stop','${c.id}')">停止<small>让它停下来</small></button>` : '')
+        + `<button class="close" onclick="cxAct('hide','${c.id}')">关闭<small>记录不删</small></button>`;
+      return `<div class="swipe" data-pid="cx${c.id}" data-w="${(c.status === 'busy' ? 2 : 1) * 86}"><div class="acts">${acts}</div>
+        <button class="term glass" onclick="tapCodex('${c.id}', this)">
+        <div class="top"><span class="dot ${c.status}"></span><span class="tag cx">Codex</span><span class="st">${c.status === 'busy' ? '回复中' : fmtTime(c.mtime)}</span></div>
+        <div class="t">${esc(c.title.split('\n')[0])}</div><div class="cwd">${esc(c.cwd)}</div></button></div>`;
+    }).join('');
+  }
+  if (cur && cur.kind === 'codex') {
+    const c = codexList.find(x => x.id === cur.session);
+    if (c && c.status !== cur.status) { cur.status = c.status; setStatus(); }
+  }
+}
+function tapCodex(id, card) {
+  // 滑开着的时候，点一下是收回，不是进对话
+  const el = card.parentElement;
+  if (openSwipe === el.dataset.pid) return setOpen(el, false);
+  if (openSwipe) return closeAll();
+  openCodex(id);
+}
+async function cxAct(what, id) {
+  try {
+    await api('/api/codex/' + what, {session: id});
+    toast(what === 'stop' ? '已让它停下来' : '已关闭，桌面版 Codex 里还能看到');
+  } catch (e) { toast('没成功：' + e.message); }
+  openSwipe = null; loadCodex();
+}
+function openCodex(id) {
+  const c = codexList.find(x => x.id === id);
+  openChat(-1, {kind: 'codex', session: c.id, title: c.title.split('\n')[0], cwd: c.cwd, status: c.status, acc_name: 'Codex', pid: 0});
+}
+setInterval(loadCodex, 5000);
+
+// 用量账单：每个号每天用掉周额度的几成；每个项目每天用了多少 token
+function last7() {
+  return Array.from({length: 7}, (_, i) => { const d = new Date(Date.now() - (6 - i) * 86400000);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+}
+const fmtTok = n => n >= 1e6 ? (n / 1e6).toFixed(1) + ' 百万' : n >= 1e4 ? Math.round(n / 1e4) + ' 万' : String(n);
+function bars(days, vals, fmt) {
+  const max = Math.max(1, ...days.map(d => vals[d] || 0));
+  return `<div class="bars">${days.map((d, i) => `<div class="bc"><i style="height:${Math.round((vals[d] || 0) / max * 100)}%"></i>
+    <span>${i === 6 ? '今' : +d.slice(8)}</span></div>`).join('')}</div>`;
+}
+async function openStats() {
+  openFull('stats');
+  $('statsBody').innerHTML = '<div class="empty">统计中…</div>';
+  let s; try { s = await api('/api/stats'); } catch (e) { $('statsBody').innerHTML = `<div class="empty">读取失败：${esc(e.message)}</div>`; return; }
+  const days = last7(), today = days[6];
+  const accs = Object.entries(s.names).map(([id, name]) => {
+    const v = s.accounts.accounts?.[id] || {}, week = days.reduce((a, d) => a + (v[d] || 0), 0);
+    return `<div class="stat"><div class="sh"><b>${esc(name)}</b><span>今天用掉周额度 <em>${Math.round(v[today] || 0)}%</em> · 7 天共 ${Math.round(week)}%</span></div>${bars(days, v)}</div>`;
+  }).join('');
+  const total = s.projects.reduce((a, p) => a + p.total, 0) || 1;
+  const projs = s.projects.map(p => {
+    // 直接在用户目录里干的活（没进具体项目文件夹），起个好懂的名字
+    const name = /^[A-Za-z]:\\Users\\[^\\]+$/.test(p.project) ? '用户目录（没进项目文件夹的）' : p.project.split('\\').at(-1) || p.project;
+    return `<div class="stat"><div class="sh"><b>${esc(name)}</b><span>${fmtTok(p.total)} · 占 ${Math.round(p.total / total * 100)}%</span></div>${bars(days, p.days)}</div>`;
+  }).join('');
+  $('statsBody').innerHTML = `<div class="sec3">各个号</div>${accs}
+    <div class="hint3">${s.accounts.since ? '从 ' + s.accounts.since + ' 开始记录，之前的没有数据' : '刚开始记录，过一阵子才有数据'}</div>
+    <div class="sec3">各个项目（按 token 算）</div>${projs || '<div class="empty">没有数据</div>'}
+    <div class="hint3">token 是 Claude 读写的字数单位，数越大越费额度；不算「读缓存」那部分（很便宜）</div>`;
+}
+
+// ---------- 终端画面 ----------
+let termTimer = null, autoTermFor = null;
+async function loadTerm() {
+  if (!cur || !$('term').classList.contains('show')) { clearInterval(termTimer); termTimer = null; return; }
+  try {
+    const {lines} = await api('/api/term_screen?pid=' + cur.pid);
+    const box = $('termTxt'), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    box.textContent = lines.join('\n');
+    if (atEnd) box.scrollTop = box.scrollHeight;
+  } catch (e) { $('termTxt').textContent = '读不到画面：' + e.message; }
+}
+function openTerm() {
+  if (!cur || cur.kind === 'codex') return;  // 桌面版 Codex 没有终端窗口
+  openFull('term'); $('termTxt').textContent = '读取中…';
+  loadTerm(); clearInterval(termTimer); termTimer = setInterval(loadTerm, 1000);
+}
+async function tkey(keys) { await key(keys); setTimeout(loadTerm, 300); }
+// 终端停下来等你选、又不是那种能在手机上直接点选项的问题时，自动把画面弹出来（每次等待只弹一回）
+function autoTerm() {
+  if (!cur || cur.kind === 'codex' || cur.status !== 'waiting' || quick.question) { if (cur?.status !== 'waiting') autoTermFor = null; return; }
+  if (Date.now() < tsQuietUntil) return;  // 切模型/思考程度时弹的确认框管理器会自己点掉，不用打开画面
+  if (autoTermFor === cur.pid || $('term').classList.contains('show')) return;
+  autoTermFor = cur.pid; openTerm(); toast('终端在等你选择，用下面的按键操作');
+}
+
+// 改动
+let chgData = [], chgFile = null;
+async function openChanges() {
+  if (!cur) return;
+  openFull('chg'); chgFile = null;
+  $('chgBody').innerHTML = '<div class="empty">读取中…</div>';
+  chgData = await api('/api/changes?session=' + encodeURIComponent(cur.session));
+  drawChanges();
+}
+function drawChanges() {
+  if (chgFile === null) {
+    $('chgTitle').textContent = `改了 ${chgData.length} 个文件`; $('chgBack').textContent = '关闭';
+    $('chgBody').innerHTML = chgData.length ? `<div class="list" style="margin-top:0">${chgData.map((f, i) => {
+      const p = f.file.split(/[\\/]/);
+      return `<button class="it" onclick="chgFile=${i};drawChanges()"><span class="n">${f.edits.length} 处</span><b>${esc(p.at(-1))}</b><small>${esc(f.file)}</small></button>`;
+    }).join('')}</div>` : '<div class="empty">这段对话还没改过文件</div>';
+    return;
+  }
+  const f = chgData[chgFile];
+  $('chgTitle').textContent = f.file.split(/[\\/]/).at(-1); $('chgBack').textContent = '‹ 文件';
+  $('chgBody').innerHTML = `<div class="hint" style="font-size:12px;color:var(--faint);word-break:break-all">${esc(f.file)}</div>` +
+    f.edits.map((e, i) => `<div class="diff"><div class="h">${e.type === 'write' ? '整个文件写入' : '第 ' + (i + 1) + ' 处'}</div>` +
+      (e.old ? `<pre class="del">${esc(e.old)}</pre>` : '') + `<pre class="add">${esc(e.new)}</pre></div>`).join('');
+  $('chgBody').scrollTop = 0;
+}
+function chgBack() { if (chgFile !== null) { chgFile = null; drawChanges(); } else history.back(); }
+async function pick(j) {
+  // 终端里光标默认停在第一个选项：往下移 j 格再回车
+  await key([...Array(j).fill('down'), 'enter']);
+  qStep.i++; drawQuick();
+}
+
+function openChat(i, conv) {
+  cur = conv || running[i]; lastSig = null; lastMs = []; pending = []; quick.question = null;
+  document.querySelector('.bar .chg').style.display = cur.kind ? 'none' : '';  // 「改动」只看 Claude 的
+  document.querySelector('.bar .scr').style.display = cur.kind === 'codex' ? 'none' : '';  // 桌面版 Codex 没有终端画面
+  $('prog').classList.remove('show', 'open');
+  loadQuick(); loadProgress(); tst = null; loadTermState();
+  $('cTitle').textContent = cur.title || '（新对话）';
+  setStatus();
+  $('msgs').innerHTML = ''; $('home').style.display = 'none'; $('chat').classList.add('show');
+  $('accMask').classList.remove('show');
+  history.pushState({chat: 1}, '');
+  loadMsgs();
+}
+window.addEventListener('popstate', () => {
+  if (popHandled) { popHandled = false; return; }  // 这次返回已经用来关全屏页了
+  if (!cur) return;
+  cur = null; $('chat').classList.remove('show'); $('home').style.display = ''; loadRunning(); loadAccounts();
+});
+
+// 每条回复的原文，给「复制」按钮用
+let copies = [];
+function copyText(t) {
+  const done = () => toast('已复制');
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
+  fallbackCopy(t, done);
+}
+function fallbackCopy(t, done) {
+  const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done();
+}
+
+// 长按一条回复 0.5 秒，在手指旁边弹出「复制」，点它复制整条（iPhone 只允许点一下时复制，所以要再点一下）
+let lpTimer = null, lpXY = null;
+document.addEventListener('touchstart', e => {
+  const b = e.target.closest('.a[data-c]');
+  if (!b || b.classList.contains('sel') || e.target.closest('button, a, code, img, details')) return;  // 选字模式下交给 iPhone 自己处理
+  lpXY = [e.touches[0].clientX, e.touches[0].clientY];
+  lpTimer = setTimeout(() => {
+    const p = $('cpPop'); p.dataset.c = b.dataset.c;
+    p.style.left = Math.min(innerWidth - 200, Math.max(10, lpXY[0] - 95)) + 'px';  // 框大约 190 宽，别超出屏幕
+    p.style.top = Math.max(60, lpXY[1] - 56) + 'px';
+    p.classList.add('show'); b.classList.add('lp');
+  }, 500);
+}, {passive: true});
+document.addEventListener('touchmove', e => {
+  if (lpTimer && lpXY && Math.hypot(e.touches[0].clientX - lpXY[0], e.touches[0].clientY - lpXY[1]) > 10) { clearTimeout(lpTimer); lpTimer = null; }
+}, {passive: true});
+document.addEventListener('touchend', () => { clearTimeout(lpTimer); lpTimer = null; });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('#cpPop button');
+  const i = $('cpPop').dataset.c;
+  if (btn?.dataset.do === 'all') copyText(copies[+i]);
+  if (btn?.dataset.do === 'sel') {
+    // 只想复制一部分：这条回复改回 iPhone 自己的选字方式
+    document.querySelector(`.a[data-c="${i}"]`)?.classList.add('sel');
+    toast('再长按要复制的地方，拖动蓝色把手选好，点「拷贝」');
+  }
+  if (btn || !e.target.closest('.a[data-c]')) {
+    $('cpPop').classList.remove('show'); document.querySelectorAll('.a.lp').forEach(x => x.classList.remove('lp'));
+  }
+});
+
+function render(ms) {
+  // 连着的工具调用合成一行「执行了 N 个操作」，点开看明细
+  const out = []; let tools = [];
+  copies = [];
+  const flush = () => { if (tools.length) out.push(`<details class="tools"><summary>执行了 ${tools.length} 个操作</summary>${tools.map(t => `<div>${esc(t)}</div>`).join('')}</details>`); tools = []; };
+  for (const m of ms) {
+    if (m.kind === 'tool') { tools.push(m.text); continue; }
+    flush();
+    if (m.kind === 'image') { out.push(`<div class="seen"><span>Claude 看了这张图</span>${imgTag(m.text)}</div>`); continue; }
+    if (m.role === 'user') { out.push(`<div class="u">${userHtml(m.text)}</div>`); continue; }
+    // 回复里提到的本机图片：文字里去掉那串路径，图片单独成一条消息跟在后面
+    const pics = [...new Set(m.text.match(PATH_RE) || [])];
+    const text = pics.length ? m.text.replace(PATH_RE, '').replace(/`\s*`/g, '').replace(/\n{3,}/g, '\n\n').trim() : m.text;
+    if (text) { copies.push(m.text); out.push(`<div class="a" data-c="${copies.length - 1}">${md(text)}</div>`); }  // 长按复制整条
+    for (const p of pics) out.push(`<div class="a picmsg">${imgTag(p)}</div>`);
+    const cards = webCards(m.text) + fileCards(m.text);  // 提到本地网页 / 做好的文件，就跟一张卡片
+    if (cards) out.push(`<div class="cards">${cards}</div>`);
+  }
+  flush();
+  return out.join('');
+}
+const nearBottom = () => { const b = $('msgs'); return b.scrollHeight - b.scrollTop - b.clientHeight < 100; };
+function toBottom(smooth) { const b = $('msgs'); b.scrollTo({top: b.scrollHeight, behavior: smooth ? 'smooth' : 'auto'}); }
+function onScroll() { $('jump').classList.toggle('show', !nearBottom()); }
+
+// 每 0.6 秒问一次：对话没变时电脑只回一个文件大小，很省；变了才整段重画
+let lastMs = [], pending = [], polling = false;
+async function loadMsgs() {
+  if (!cur || polling) return;
+  if (cur.kind === 'codexterm' && !cur.session) return;  // Codex 终端在你说第一句之前还没有对话记录
+  polling = true;
+  try {
+    const d = cur.kind  // Codex（桌面版和终端）都读 Codex 的记录
+
+      ? await api(`/api/codex/messages?session=${encodeURIComponent(cur.session)}&since=${lastSig ?? ''}`)
+      : await api(`/api/messages?session=${encodeURIComponent(cur.session)}&pid=${cur.pid}&since=${lastSig ?? ''}`);
+    if (d.status === 'closed') loadRunning();  // 终端没了：马上找一下是不是换号了，跟过去
+    else if (d.status && d.status !== cur.status) { cur.status = d.status; setStatus(); }
+    // 电脑记着的「你发了但 Claude 还没读到」的话：退出再进、换个设备也照样显示
+    const srv = d.pending || [], before = pending.map(p => p.text).join('\n');
+    pending = pending.filter(p => !p.server || srv.includes(p.text));
+    for (const t of srv) if (!pending.some(p => p.text === t)) pending.push({text: t, server: true});
+    // 刚换号的那几秒可能拿到一段空的：原来有内容就别用空的覆盖
+    if (d.messages && !(d.messages.length === 0 && lastMs.length)) { lastMs = d.messages; paint(lastSig === null); lastSig = String(d.size); }
+    else if (pending.map(p => p.text).join('\n') !== before) paint(false);  // 只有变了才重画，不然会闪
+  } catch {} finally { polling = false; }
+}
+
+// 你刚发完消息的 10 秒内：不管来了新内容还是图片加载完把页面撑长，都一直贴在最底下（你手指往上翻就不管了）
+let stickUntil = 0;
+function paint(first) {
+  // 刚打开对话：图片一张张加载完会把内容撑长，5 秒内都跟着贴底，不然停在半中间
+  if (first) stickUntil = Date.now() + 5000;
+  const stick = first || nearBottom() || Date.now() < stickUntil;
+  // 已经出现在对话记录里的「发送中」消息就去掉
+  pending = pending.filter(p => !lastMs.slice(-8).some(m => m.role === 'user' && m.text.includes(p.text.slice(0, 20))));
+  const open = [...document.querySelectorAll('details.tools')].map(x => x.open);  // 展开过的工具明细保持展开
+  $('msgs').innerHTML = render(lastMs) + pending.map(p => `<div class="u pending">${userHtml(p.text)}<small>${p.server ? '已发送，Claude 忙完就会看到' : '发送中…'}</small></div>`).join('');
+  document.querySelectorAll('details.tools').forEach((x, i) => { if (open[i]) x.open = true; });
+  if (stick) {
+    toBottom(false);
+    // 图片是后加载的，加载完会把内容撑长，再贴一次底
+    $('msgs').querySelectorAll('img').forEach(im => im.complete || im.addEventListener('load', () => {
+      if (Date.now() < stickUntil || nearBottom()) toBottom(false);
+    }, {once: true}));
+  }
+  onScroll();
+  drawQuick();  // 快捷回复跟着最新一条消息变
+  fillFileInfo();  // 文件卡片补上大小
+  if (playing) showAudio();  // 正在放的那首，重画后卡片还是「播放中」
+}
+
+// 回复里的本机图片路径（比如 C:\Users\...\截图.png）
+const PATH_RE = /[A-Za-z]:\\[^\s`'"<>|*?\n]+?\.(?:png|jpe?g|gif|webp)\b/gi;
+const imgTag = p => `<img class="pic" loading="lazy" src="/api/file?path=${encodeURIComponent(p)}&k=${encodeURIComponent(K)}" onclick="zoom(this.src)" onerror="this.remove()">`;
+function zoom(src) { $('zoomImg').src = src; $('zoom').classList.add('show'); }
+
+// 用户消息里的图片路径，显示成缩略图
+const IMG_RE = /C:\\Users\\[^\s]*?\\\.claude-accounts\\uploads\\([\w.-]+\.(?:jpg|png|webp|heic))/gi;
+function userHtml(t) {
+  return esc(t).replace(IMG_RE, (_, name) => `<img class="thumb" src="/api/img?name=${encodeURIComponent(name)}&k=${encodeURIComponent(K)}">`);
+}
+
+function grow() { const t = $('input'); t.style.height = 'auto'; t.style.height = Math.min(130, t.scrollHeight) + 'px'; }
+
+// ---------- 图片：手机上先压缩到最长边 1600，再传到电脑 ----------
+let attachments = [];  // {path, url}
+function shrink(file) {
+  return new Promise((ok, fail) => {
+    const img = new Image();
+    img.onload = () => {
+      // 最长边 1280、画质 0.8：大小约是原来的一半，Claude 看图够用
+      const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = img.width * k; c.height = img.height * k;
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      c.toBlob(b => b ? ok(b) : fail(new Error('压缩失败')), 'image/jpeg', .8);
+    };
+    img.onerror = () => fail(new Error('读不了这张图'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function pickImages(files) {
+  for (const f of files) {
+    const chip = {path: '', url: URL.createObjectURL(f), loading: true};
+    attachments.push(chip); drawAttach();
+    try {
+      chip.pct = '压缩'; drawAttach();
+      const blob = await shrink(f);
+      // 用 XHR 是为了拿到上传进度，显示在缩略图上
+      const r = await new Promise((ok, fail) => {
+        const x = new XMLHttpRequest();
+        x.open('POST', `/api/upload?k=${encodeURIComponent(K)}`);
+        x.setRequestHeader('Content-Type', 'image/jpeg');
+        x.upload.onprogress = e => { if (e.lengthComputable) { chip.pct = Math.round(e.loaded / e.total * 100) + '%'; drawAttach(); } };
+        x.onload = () => { try { ok(JSON.parse(x.responseText)); } catch { fail(new Error('上传失败')); } };
+        x.onerror = () => fail(new Error('上传失败，检查一下网络'));
+        x.send(blob);
+      });
+      if (!r.path) throw new Error(r.error || '上传失败');
+      chip.path = r.path; chip.loading = false;
+    } catch (e) { attachments = attachments.filter(a => a !== chip); toast(e.message); }
+    drawAttach();
+  }
+  $('file').value = '';
+}
+function drawAttach() {
+  $('attach').innerHTML = attachments.map((a, i) => `<div class="att${a.loading ? ' loading' : ''}"><img src="${a.url}">${a.loading ? `<span class="pct">${a.pct || ''}</span>` : ''}<button onclick="attachments.splice(${i},1);drawAttach()">×</button></div>`).join('');
+  $('attach').classList.toggle('show', attachments.length > 0);
+  updSend();  // 有图片要发时，按钮是发送不是麦克风
+}
+
+async function send(quickText) {
+  const t = $('input');
+  if (attachments.some(a => a.loading)) return toast('图片还在上传，稍等');
+  // 图片路径放在前面，Claude 看到路径会自己去打开图片；点常用回复时只发那一句
+  const text = typeof quickText === 'string' ? quickText
+    : [...attachments.map(a => a.path), t.value.trim().replace(/\n/g, ' ')].filter(Boolean).join(' ');
+  if (!text || !cur) return;
+  $('sendBtn').disabled = true;
+  stickUntil = Date.now() + 10000;
+  pending.push({text}); paint(false); toBottom(false);   // 先在手机上显示出来，不等电脑；直接跳到底，不慢慢滚（慢慢滚会被重画打断）
+  requestAnimationFrame(() => toBottom(false));
+  const fromBox = typeof quickText !== 'string', saved = t.value;
+  if (fromBox) { t.value = ''; grow(); attachments = []; drawAttach(); }  // 点常用回复时，输入框里正在写的不动；清空后按钮变回 🎤
+  try {
+    if (cur.kind === 'codex') {
+      await api('/api/codex/send', {session: cur.session, text, cwd: cur.cwd});
+      cur.status = 'busy'; setStatus();
+    } else {
+      await loadRunning();  // 先确认发给的是这段对话现在所在的终端（可能刚换过号）
+      await api('/api/send', {pid: cur.pid, text, keys: ['enter']});
+    }
+    const mine = pending.find(p => p.text === text && !p.server);
+    if (mine) mine.server = true;  // 电脑已经记下这句了，交给它来管什么时候消失
+  } catch (e) {
+    pending = pending.filter(p => p.text !== text); paint(false);
+    if (fromBox) { t.value = saved; grow(); updSend(); }
+    toast('发送失败：' + e.message);
+  }
+  $('sendBtn').disabled = false;
+}
+async function key(keys) {
+  if (!cur) return;
+  try { await api('/api/send', {pid: cur.pid, keys}); toast('已按 ' + keys.join(' ')); } catch (e) { toast('失败：' + e.message); }
+}
+
+// ---------- 首页：终端卡片左滑换号 ----------
+let openSwipe = null, swArmed = null, touching = false;
+function swipeHtml(r, i) {
+  // Claude 终端换到别的 Claude 号；Codex 终端换到别的 Codex 号（登录了的）
+  const others = r.kind === 'codexterm'
+    ? codexAccs.filter(a => 'cx:' + a.id !== r.acc && a.logged).map(a => ({...a, id: 'cx:' + a.id, name: 'Codex·' + a.name}))
+    : accList.filter(a => a.id !== r.acc).map(a => ({...a, name: 'Claude·' + a.name}));
+  // 左滑只露两个按钮：「换号」点开再选号（号多了排不下），「关闭」
+  const acts = (others.length ? `<button onclick="pickSwitch(${i})">换号<small>${others.length} 个可选</small></button>` : '')
+    + `<button class="close" onclick="doClose(${i}, this)">关闭<small>窗口一起关</small></button>`;
+  return `<div class="swipe" data-pid="${r.pid}" data-w="${(others.length ? 2 : 1) * 86}"><div class="acts">${acts}</div>
+    <button class="term glass ${r.status}" onclick="tapCard(${i}, this)">
+      <div class="top"><span class="dot ${r.status}"></span><span class="tag${r.kind === 'codexterm' ? ' cx' : ''}">${esc(r.acc_name)}</span><span class="st ${r.status}">${ST[r.status] || '空闲'}</span></div>
+      <div class="t">${esc(r.title || '（新对话）')}</div><div class="cwd">${esc(r.cwd)}</div></button></div>`;
+}
+function setOpen(el, open) {
+  const card = el.querySelector('.term'), w = +el.dataset.w;
+  card.style.transform = open ? `translateX(-${w}px)` : '';
+  openSwipe = open ? el.dataset.pid : (openSwipe === el.dataset.pid ? null : openSwipe);
+  if (!open) swArmed = null;
+}
+function closeAll(except) { document.querySelectorAll('.swipe').forEach(s => s !== except && setOpen(s, false)); }
+function tapCard(i, card) {
+  // 滑开着的时候，点一下是收回，不是进对话
+  const el = card.parentElement;
+  if (openSwipe === el.dataset.pid) return setOpen(el, false);
+  if (openSwipe) return closeAll();
+  openChat(i);
+}
+function pickSwitch(i) {
+  const r = running[i];
+  const others = r.kind === 'codexterm'
+    ? codexAccs.filter(a => 'cx:' + a.id !== r.acc && a.logged).map(a => ({...a, id: 'cx:' + a.id, name: 'Codex · ' + a.name}))
+    : accList.filter(a => a.id !== r.acc).map(a => ({...a, name: 'Claude · ' + a.name}));
+  const pct = (u, k) => u && !u.error && u[k]?.percent != null ? Math.round(u[k].percent) + '%' : '–';
+  $('swNote').textContent = (r.title || '这个终端') + (r.status === 'busy' ? ' · 正在回复，换号会打断这次回复' : ' · 对话会原样接上');
+  $('swList').innerHTML = others.map(a => `<button onclick="$('swMask').classList.remove('show'); doSwitch(${i}, '${a.id}')">
+    <span>${esc(a.name)}<small>${a.usage?.error ? esc(a.usage.error) : ''}</small></span><b>5h ${pct(a.usage, 'five_hour')}<br>周 ${pct(a.usage, 'seven_day')}</b></button>`).join('');
+  closeAll();
+  $('swMask').classList.add('show');
+}
+async function doSwitch(i, acc) {
+  const r = running[i];
+  const toName = (accList.find(a => a.id === acc)?.name && 'Claude · ' + accList.find(a => a.id === acc).name)
+    || 'Codex · ' + (codexAccs.find(a => 'cx:' + a.id === acc)?.name || '');
+  swOpen = null;
+  swAnim(r.acc_name, toName, 0);
+  try {
+    await api('/api/switch', {pid: r.pid, acc});
+    swAnim(r.acc_name, toName, 1);
+    watchSwitch(r, acc, toName);
+  } catch (e) { $('swa').classList.remove('show'); toast('换号失败：' + e.message); }
+  openSwipe = null; swArmed = null; setTimeout(loadRunning, 1500);
+}
+// ---------- 换号动画：原来的号 → 新号，按步骤打勾，接上了变绿 ✓ ----------
+const SW_STEPS = ['结束原来的', '用新号打开', '接上对话'];
+// 打开历史对话 / 新开终端也用这个动画，只是步骤和标题不同
+let swOpen = null;  // null = 换号；{steps} = 打开
+function swAnim(from, to, step, note) {
+  const steps = swOpen ? swOpen.steps : SW_STEPS;
+  $('swaFrom').textContent = from; $('swaTo').textContent = to;
+  $('swaSteps').innerHTML = steps.map((s, i) => `<li class="${i < step ? 'done' : i === step ? 'now' : ''}">${s}</li>`).join('');
+  const ok = step >= steps.length;
+  $('swa').classList.toggle('ok', ok);
+  $('swaTitle').textContent = swOpen ? (ok ? '已用 ' + to + ' 打开' : '正在打开…') : (ok ? '已换到 ' + to : '正在换号…');
+  $('swaNote').innerHTML = note || '';
+  $('swa').classList.add('show');
+}
+function watchSwitch(r, acc, toName) {
+  const until = Date.now() + 45000;
+  const t = setInterval(async () => {
+    await loadRunning();
+    const n = running.find(x => x.session === r.session && x.acc === acc);
+    if (n) swAnim(r.acc_name, toName, 2);
+    if (n && n.status === 'waiting') {
+      clearInterval(t);
+      swAnim(r.acc_name, toName, 2, '终端在等你选择，<a onclick="$(\'swa\').classList.remove(\'show\'); openChat(running.indexOf(running.find(x => x.pid === ' + n.pid + '))); setTimeout(openTerm, 300)">点这里打开画面</a>');
+      return;
+    }
+    if (n && n.status !== 'waiting' && n.title) {
+      clearInterval(t); swAnim(r.acc_name, toName, 3);
+      setTimeout(() => $('swa').classList.remove('show'), 1600);
+      return;
+    }
+    if (Date.now() > until) {
+      clearInterval(t);
+      swAnim(r.acc_name, toName, 2, '电脑上已经用新号打开了，如果没接上，点进对话看看「画面」');
+      setTimeout(() => $('swa').classList.remove('show'), 4000);
+    }
+  }, 1500);
+}
+
+async function doClose(i, btn) {
+  const r = running[i];
+  if (r.status === 'busy' && swArmed !== r.pid + 'close') {  // 正在回复时点两下才关
+    swArmed = r.pid + 'close'; btn.classList.add('armed'); btn.querySelector('small').textContent = '正在回复，再点一次'; return;
+  }
+  try {
+    await api('/api/close', {pid: r.pid}); toast('已关闭，对话还能在「历史」里接着聊');
+    running = running.filter(x => x.pid !== r.pid);  // 先从列表里拿掉，不用等下一次刷新
+  } catch (e) { toast('关闭失败：' + e.message); }
+  openSwipe = null; swArmed = null; loadRunning();
+}
+// 手指左右滑
+let sx = 0, sy = 0, base = 0, dragEl = null, horiz = null;
+document.addEventListener('touchstart', e => {
+  const el = e.target.closest('.swipe'); if (!el || e.target.closest('.acts')) return;
+  dragEl = el; touching = true; horiz = null;
+  sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  base = openSwipe === el.dataset.pid ? -el.dataset.w : 0;
+}, {passive: true});
+document.addEventListener('touchmove', e => {
+  if (!dragEl) return;
+  const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+  if (horiz === null && Math.abs(dx) + Math.abs(dy) > 8) horiz = Math.abs(dx) > Math.abs(dy);
+  if (!horiz) return;
+  closeAll(dragEl); dragEl.classList.add('drag');
+  const x = Math.min(0, Math.max(-dragEl.dataset.w - 20, base + dx));
+  dragEl.querySelector('.term').style.transform = `translateX(${x}px)`;
+}, {passive: true});
+document.addEventListener('touchend', e => {
+  touching = false;
+  if (!dragEl) return;
+  const el = dragEl; dragEl = null; el.classList.remove('drag');
+  if (!horiz) return;
+  const dx = e.changedTouches[0].clientX - sx;
+  setOpen(el, base + dx < -el.dataset.w / 2);
+});
+
+// ---------- 新开终端 ----------
+let shAcc = null, shDir = null, accList = [], waitNew = null;
+async function openSheet() {
+  const [accs, dirs] = await Promise.all([api('/api/accounts'), api('/api/folders')]);
+  accList = accs;
+  shAcc = (accs.find(a => a.is_default) || accs[0]).id; shDir = dirs[0];
+  $('shAcc').innerHTML = accs.map(a => `<button data-id="${a.id}" onclick="pickAcc('${a.id}')">Claude · ${esc(a.name)}</button>`).join('')
+    // 也能开一个跑 Codex 的终端，选用哪个 Codex 号
+    + codexAccs.map(a => `<button data-id="cx:${a.id}" onclick="pickAcc('cx:${a.id}')">Codex · ${esc(a.name)}</button>`).join('');
+  $('shDir').innerHTML = dirs.map((d, i) => {
+    const parts = d.split('\\');
+    return `<button data-i="${i}" onclick="pickDir(${i})"><span>${esc(parts.at(-1) || d)}<small>${esc(d)}</small></span></button>`;
+  }).join('');
+  $('shDir').dirs = dirs;
+  pickAcc(shAcc); pickDir(0);
+  $('sheetMask').classList.add('show');
+}
+function closeSheet() { $('sheetMask').classList.remove('show'); }
+function pickAcc(id) { shAcc = id; document.querySelectorAll('#shAcc button').forEach(b => b.classList.toggle('on', b.dataset.id === id)); }
+function pickDir(i) { shDir = $('shDir').dirs[i]; document.querySelectorAll('#shDir button').forEach(b => b.classList.toggle('on', +b.dataset.i === i)); }
+async function launch() {
+  const before = new Set(running.map(r => r.pid));
+  closeSheet();
+  const to = shAcc.startsWith('cx:') ? 'Codex · ' + (codexAccs.find(a => 'cx:' + a.id === shAcc)?.name || '') : 'Claude · ' + (accList.find(a => a.id === shAcc)?.name || '');
+  openAnim('新对话', to, ['发送到电脑', `用 ${to} 打开`, '准备就绪']);
+  try { await api('/api/launch', {acc: shAcc, cwd: shDir}); } catch (e) { $('swa').classList.remove('show'); toast('打开失败：' + e.message); return; }
+  swAnim('新对话', to, 1);
+  // 等新终端出现，自动进入它的对话页
+  waitNew = {before, acc: shAcc, until: Date.now() + 40000, from: '新对话', to};
+}
+function openAnim(from, to, steps) { swOpen = {steps}; swAnim(from, to, 0); }
+async function checkNew() {
+  if (!waitNew || cur) return;
+  const w = waitNew;
+  if (Date.now() > w.until) {
+    waitNew = null;
+    swAnim(w.from, w.to, 1, '电脑上可能还在启动，过一会儿在首页「正在运行」里找它');
+    setTimeout(() => { $('swa').classList.remove('show'); swOpen = null; }, 4000);
+    return;
+  }
+  await loadRunning();  // 等的时候每秒查一次，打勾更及时
+  const r = running.find(x => !w.before.has(x.pid) && x.acc === w.acc && (!w.session || x.session === w.session));
+  if (!r || waitNew !== w) return;
+  if (r.status === 'waiting') {
+    // 停在「信任这个文件夹吗」这类提示上：提示去画面里处理
+    swAnim(w.from, w.to, 2, `终端在等你确认，<a onclick="$('swa').classList.remove('show'); swOpen = null; openChat(running.findIndex(x => x.pid === ${r.pid})); setTimeout(openTerm, 300)">点这里打开画面</a>`);
+    waitNew = null;
+    return;
+  }
+  waitNew = null;
+  swAnim(w.from, w.to, 3);
+  setTimeout(() => { $('swa').classList.remove('show'); swOpen = null; openChat(running.findIndex(x => x.pid === r.pid)); }, 1000);
+}
+
+// ---------- 主屏幕图标 + 通知 ----------
+{ const l = document.createElement('link'); l.rel = 'manifest'; l.href = `/manifest.json?k=${encodeURIComponent(K)}`; document.head.appendChild(l); }
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+function notice(html) { $('notice').innerHTML = html; $('notice').hidden = !html; }
+async function setupPush() {
+  if (!isSecureContext) return notice('');  // 普通网址下手机不允许通知
+  if (!('serviceWorker' in navigator)) return;
+  const reg = await navigator.serviceWorker.register('/sw.js');
+  if (!('PushManager' in window)) {
+    return notice(standalone ? '' : '<span>想收到通知：点 Safari 底部「分享」→「添加到主屏幕」，然后从主屏幕图标打开</span>');
+  }
+  if (Notification.permission === 'granted') {
+    const sub = await reg.pushManager.getSubscription() || await subscribe(reg);
+    if (sub) await api('/api/subscribe', sub.toJSON());
+    return notice('');
+  }
+  if (Notification.permission === 'denied') return notice('<span>通知被关掉了：到手机「设置 → 通知」里找到 Remote CC 打开</span>');
+  notice('<span>Claude 回复完 / 等你确认时提醒你</span><button onclick="enablePush()">开启通知</button>');
+}
+async function subscribe(reg) {
+  const {key} = await api('/api/push-key');
+  const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - key.length % 4) % 4)), c => c.charCodeAt(0));
+  return reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: raw});
+}
+async function enablePush() {
+  try {
+    if (await Notification.requestPermission() !== 'granted') return setupPush();
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await subscribe(reg);
+    await api('/api/subscribe', sub.toJSON());
+    notice(''); toast('通知已开启');
+  } catch (e) { toast('开启失败：' + e.message); }
+}
+setupPush();
+
+// 点通知打开时，网址后面带着 #s=对话编号，直接进入那段对话
+let openSession = (location.hash.match(/#s=([\w-]+)/) || [])[1];
+function checkHash() {
+  if (!openSession) return;
+  const i = running.findIndex(r => r.session === openSession);
+  if (i >= 0) { openSession = null; history.replaceState(null, '', location.pathname + location.search); openChat(i); }
+}
+window.addEventListener('hashchange', () => { openSession = (location.hash.match(/#s=([\w-]+)/) || [])[1]; if (cur) history.back(); checkHash(); });
+
+// 电脑上的页面改过了就自动刷新（主屏幕打开的页面没法下拉刷新）；正在打字或有图片没发时先不刷
+const VERSION = '__VERSION__';
+setInterval(async () => {
+  try {
+    const {v} = await api('/api/version');
+    if (v !== VERSION && !$('input').value && !attachments.length) location.reload();
+  } catch {}
+}, 15000);
+
+// 键盘弹没弹出：可见区域比整个窗口矮一大截，就是键盘占了位置
+if (window.visualViewport) {
+  const onVV = () => document.body.classList.toggle('kbd',
+    document.activeElement === $('input') || window.innerHeight - visualViewport.height > 150);
+  visualViewport.addEventListener('resize', onVV);
+  $('input').addEventListener('focus', () => setTimeout(onVV, 300));
+  $('input').addEventListener('blur', () => setTimeout(onVV, 300));
+}
+
+updSend();
+loadAccounts().then(() => loadRunning()).then(checkHash).then(loadRecent);
+setInterval(loadRecent, 30000);
+loadCodex();
+setInterval(checkNew, 1000);
+setInterval(checkHash, 1000);
+setInterval(loadAccounts, 30000);
+// 某个号的重置时间到了，就马上去拿新数字（每 20 秒最多问一次，免得一直问）
+let accFetchedAt = Date.now();
+setInterval(() => {
+  const due = accList.some(a => ['five_hour', 'seven_day'].some(k => {
+    const t = a.usage?.[k]?.resets_at; return t && new Date(t) < Date.now();
+  }));
+  if (due && Date.now() - accFetchedAt > 20000) { accFetchedAt = Date.now(); loadAccounts(); }
+}, 5000);
+setInterval(loadRunning, 4000);
+setInterval(loadMsgs, 600);
+setInterval(loadQuick, 2000);
+</script>
+</body>
+</html>
