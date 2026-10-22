@@ -1396,6 +1396,43 @@ def get_usage(acc_id):
             for k in ("five_hour", "seven_day")}
 
 
+# ---------- Windows 防火墙：手机连不进来多半是它拦了 ----------
+FW_RULE = "Remote CC - 手机网页"
+# 第一次运行时 Windows 会弹「是否允许访问网络」，点了取消会生成拦 Python 的入站阻止规则，阻止规则比放行规则优先
+_FW_BLOCKS = ("Get-NetFirewallApplicationFilter | Where-Object {{ $_.Program -like '{dir}\\*' }} | Get-NetFirewallRule | "
+              "Where-Object {{ $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' }}")
+
+
+def _ps(script, timeout=60):
+    return subprocess.run(["powershell", "-NoProfile", "-Command", script], capture_output=True, text=True,
+                          encoding="utf-8", errors="replace", stdin=subprocess.DEVNULL, timeout=timeout,
+                          creationflags=subprocess.CREATE_NO_WINDOW).stdout
+
+
+def firewall_ok():
+    """有放行规则、而且没有拦这个 Python 的阻止规则，手机才连得进来"""
+    import sys
+    blocks = _FW_BLOCKS.format(dir=Path(sys.executable).parent)
+    return "ok" in _ps(f"$r = Get-NetFirewallRule -DisplayName '{FW_RULE}' -ErrorAction SilentlyContinue | Where-Object Enabled -eq 'True';"
+                       f"$b = {blocks} | Where-Object Enabled -eq 'True';"
+                       "if ($r -and -not $b) { 'ok' }")
+
+
+def firewall_allow(port):
+    """弹管理员授权：加一条只放局域网和 Tailscale（100.64.0.0/10）的放行规则，停掉拦这个 Python 的阻止规则"""
+    import base64
+    import sys
+    script = (f"Remove-NetFirewallRule -DisplayName '{FW_RULE}' -ErrorAction SilentlyContinue;"
+              f"New-NetFirewallRule -DisplayName '{FW_RULE}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort {int(port)} "
+              "-RemoteAddress LocalSubnet,100.64.0.0/10 -Profile Any | Out-Null;"
+              + _FW_BLOCKS.format(dir=Path(sys.executable).parent) + " | Disable-NetFirewallRule")
+    enc = base64.b64encode(script.encode("utf-16-le")).decode()
+    # 用户在授权弹窗里点「否」时 Start-Process 会报错，这里不当回事，最后看规则在不在就知道成没成
+    _ps(f"try {{ Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile','-EncodedCommand','{enc}' }} catch {{}}",
+        timeout=300)
+    return firewall_ok()
+
+
 def _chrome():
     chrome = next((p for p in CHROME_CANDIDATES if p.exists()), None)
     if not chrome:

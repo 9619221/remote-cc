@@ -289,6 +289,12 @@ class Api:
     def switch_codex(self, pid, acc_id):
         core.switch_codex(pid, acc_id)
 
+    def firewall_ok(self):
+        return core.firewall_ok()
+
+    def firewall_allow(self):
+        return core.firewall_allow(server.PORT)
+
     def mobile_info(self):
         """手机网址 + 二维码（SVG），给主窗口的「手机」弹窗用"""
         import io
