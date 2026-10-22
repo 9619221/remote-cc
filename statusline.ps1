@@ -19,6 +19,8 @@ $line = $parts -join " | "
 $width = 0
 try { $width = [Console]::WindowWidth } catch {}
 if ($width -le 0) { $width = 110 }
-if ($width -gt $line.Length) { $line = $line.PadLeft($width - 1) }
+# 按终端里实际占的宽度补空格：中文等全角字占两格，按字数补会超出窗口宽度，整行显示不出来
+$disp = 0; foreach ($ch in $line.ToCharArray()) { $disp += $(if ([int]$ch -ge 0x2E80) { 2 } else { 1 }) }
+if ($width - 1 -gt $disp) { $line = (' ' * ($width - 1 - $disp)) + $line }
 $esc = [char]27
 Write-Host "$esc[0m$line" -NoNewline
