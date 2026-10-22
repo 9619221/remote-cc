@@ -33,7 +33,7 @@
 - **Codex 也能管**：桌面版和终端版的 Codex 对话都能看、能回
 
 ### 电脑上
-- 托盘小窗口；用 `pythonw app.py --tray` 启动会直接缩进托盘，把这条命令的快捷方式放进开机启动文件夹（Win+R 输入 `shell:startup`）就能开机自启
+- 托盘小窗口，可以开机自启（安装时选）
 - **多账号**：每个号独立的登录、独立的 Chrome，开终端时选用哪个号；运行中可以把对话换到另一个号接着聊
 - 显示每个号的 5 小时 / 每周用量，用到 90% 提醒
 
@@ -48,25 +48,31 @@
 - 可选：[Tailscale](https://tailscale.com)（在外面也能用手机连）、Chrome、Codex
 
 ### 步骤
-1. 下载这个仓库，安装依赖：
-   ```
-   pip install -r requirements.txt
-   ```
-2. **配置状态栏**（显示用量、切换模型都靠它）。打开 `%USERPROFILE%\.claude\settings.json`，加上：
-   ```json
-   "statusLine": {
-     "type": "command",
-     "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/你放仓库的路径/statusline.ps1\""
-   }
-   ```
-3. 启动：
-   ```
-   pythonw app.py
-   ```
-4. 手机连接：在小窗口里点「手机」，用手机扫二维码。
-   - 推荐用 Tailscale：电脑和手机都装上并登录同一个账号，在外面也能连。
-   - 想收推送通知，需要 HTTPS 地址：在电脑上运行 `tailscale serve --bg 8765`。
-   - iPhone 上用 Safari 打开后「添加到主屏幕」，从主屏幕图标打开才能收通知。
+1. 点本页右上角绿色的 **Code → Download ZIP**，解压到一个固定的位置（比如 `C:\RemoteCC`，之后别再挪）
+2. 双击 **`install.bat`**。它会：
+   - 检查 Python、Claude Code、Windows Terminal 装了没有，缺什么告诉你去哪装
+   - 安装依赖
+   - 配好 Claude Code 的状态栏（Remote CC 读用量、读模型都靠它；改之前会先备份；你已经有自己的状态栏的话会先问你）
+   - 在桌面建「Remote CC」快捷方式，问你要不要开机自启、要不要装语音输入
+3. 双击桌面上的 **Remote CC**，在小窗口里点「手机」，用手机扫二维码
+4. iPhone 用 Safari 打开后点「分享 → 添加到主屏幕」，以后从主屏幕图标打开
+
+### 在外面也能用 / 收推送通知
+电脑和手机都装 [Tailscale](https://tailscale.com) 并登录同一个账号，然后在电脑上运行一次：
+```
+tailscale serve --bg 8765
+```
+这样二维码会换成加密的 HTTPS 地址，在外面也能连，也能收推送通知（iPhone 必须从主屏幕图标打开才能收通知）。
+
+### 手动安装
+不想用 `install.bat` 的话：`pip install -r requirements.txt`，再把 `%USERPROFILE%\.claude\settings.json` 里的 `statusLine` 设成：
+```json
+"statusLine": {
+  "type": "command",
+  "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/你放仓库的路径/statusline.ps1\""
+}
+```
+然后 `pythonw app.py` 启动。
 
 ---
 
@@ -100,7 +106,7 @@
 
 **Requirements:** Windows 10/11 with Windows Terminal, native Claude Code, Python 3.10+. Optional: Tailscale (remote access + HTTPS for push), Chrome, Codex, faster-whisper (voice input).
 
-**Setup:** `pip install -r requirements.txt` → point Claude Code's `statusLine` at `statusline.ps1` (see step 2 above) → `pythonw app.py` → scan the QR code from the window with your phone.
+**Setup:** download the ZIP, unzip it somewhere permanent, double-click `install.bat` (checks prerequisites, installs dependencies, points Claude Code's `statusLine` at `statusline.ps1` with a backup, creates a desktop shortcut). Open **Remote CC** from the desktop, click 「手机」 and scan the QR code with your phone. For remote access and push notifications, install Tailscale on both devices and run `tailscale serve --bg 8765`.
 
 **Usage data** comes only from what Claude Code and Codex themselves report locally (the status line input and Codex session logs). No private APIs are called.
 
